@@ -12,6 +12,7 @@ using DG2072_USB_Control.Services;
 using System.Windows.Media;
 using System.Collections.Generic;
 using static DG2072_USB_Control.RigolDG2072;
+using DG2072_USB_Control.Continuous.Harmonics;
 
 
 namespace DG2072_USB_Control
@@ -62,6 +63,9 @@ namespace DG2072_USB_Control
         private DockPanel DCVoltageDockPanel;
         private DispatcherTimer _dcVoltageUpdateTimer;
 
+        // Harmonics management
+        private HarmonicsManager _harmonicsManager;
+        private HarmonicsUIController _harmonicsUIController;
 
         public MainWindow()
         {
@@ -93,7 +97,11 @@ namespace DG2072_USB_Control
                 ActiveChannelTextBlock.Text = "Channel 1";
                 ChannelControlsGroupBox.Header = "Channel 1 Controls";
                 // Update harmonics controller with the new active channel
-                harmonicController = new ChannelHarmonicController(rigolDG2072, activeChannel);
+                //harmonicController = new ChannelHarmonicController(rigolDG2072, activeChannel);
+                
+                // Update harmonics manager with new active channel
+                if (_harmonicsManager != null)
+                    _harmonicsManager.SetActiveChannel(activeChannel);
             }
             else
             {
@@ -103,8 +111,14 @@ namespace DG2072_USB_Control
                 ActiveChannelTextBlock.Text = "Channel 2";
                 ChannelControlsGroupBox.Header = "Channel 2 Controls";
                 // Update harmonics controller with the new active channel
-                harmonicController = new ChannelHarmonicController(rigolDG2072, activeChannel);
+                //harmonicController = new ChannelHarmonicController(rigolDG2072, activeChannel);
+                
+                // Update harmonics manager with new active channel
+                if (_harmonicsManager != null)
+                    _harmonicsManager.SetActiveChannel(activeChannel);
             }
+
+
 
             // Refresh the UI to show current settings for the selected channel
             if (isConnected)
@@ -964,10 +978,17 @@ namespace DG2072_USB_Control
 
             // In Window_Loaded method, add this to find and store the DC panel
             DCVoltageDockPanel = FindVisualParent<DockPanel>(DCVoltageTextBox);
+            // Initialize harmonics management
 
+            _harmonicsManager = new HarmonicsManager(rigolDG2072, activeChannel);
+            _harmonicsManager.LogEvent += (s, message) => LogMessage(message);
+
+            _harmonicsUIController = new HarmonicsUIController(_harmonicsManager, this);
+            _harmonicsUIController.LogEvent += (s, message) => LogMessage(message);
 
             startupTimer.Start();
         }
+
 
 
         /// <summary>
@@ -1039,6 +1060,20 @@ namespace DG2072_USB_Control
                         rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT OFF");
                         System.Threading.Thread.Sleep(50);
                     }
+
+
+                    // Ensure harmonics are disabled when closing
+                    if (isConnected && _harmonicsManager != null)
+                    {
+                        string currentWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
+                        if (currentWaveform.Contains("HARM"))
+                        {
+                            LogMessage("Disabling harmonic mode before closing...");
+                            _harmonicsManager.SetHarmonicState(false);
+                            System.Threading.Thread.Sleep(50);
+                        }
+                    }
+
 
                     // Set the channel back to a standard waveform (sine) for safety
                     LogMessage("Setting device to standard sine wave state...");
@@ -3553,956 +3588,956 @@ namespace DG2072_USB_Control
 
         #region Harmonics Event Handlers
 
-        private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            bool isPercentageMode = AmplitudePercentageMode.IsChecked == true;
+        //    bool isPercentageMode = AmplitudePercentageMode.IsChecked == true;
 
-            // Update the amplitude header text
-            AmplitudeHeader.Text = isPercentageMode ? "Amplitude (%)" : "Amplitude (V)";
+        //    // Update the amplitude header text
+        //    AmplitudeHeader.Text = isPercentageMode ? "Amplitude (%)" : "Amplitude (V)";
 
-            // Check if harmonicController is null before using it
-            if (harmonicController == null)
-            {
-                LogMessage("Harmonic controller not initialized. Please toggle the channel first.");
-                return;
-            }
+        //    // Check if harmonicController is null before using it
+        //    if (harmonicController == null)
+        //    {
+        //        LogMessage("Harmonic controller not initialized. Please toggle the channel first.");
+        //        return;
+        //    }
 
-            // Update the harmonics controller with the new mode
-            harmonicController.SetAmplitudeMode(isPercentageMode);
+        //    // Update the harmonics controller with the new mode
+        //    harmonicController.SetAmplitudeMode(isPercentageMode);
 
-            // Refresh the display to show values in the new mode
-            RefreshHarmonicSettings();
+        //    // Refresh the display to show values in the new mode
+        //    RefreshHarmonicSettings();
 
-            LogMessage($"Harmonic amplitude mode changed to {(isPercentageMode ? "Percentage" : "Absolute")}");
-        }
+        //    LogMessage($"Harmonic amplitude mode changed to {(isPercentageMode ? "Percentage" : "Absolute")}");
+        //}
 
         // For harmonic amplitude textboxes
-        private void HarmonicAmplitudeTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void HarmonicAmplitudeTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            TextBox textBox = sender as TextBox;
-            if (textBox == null || !int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
-                return;
+        //    TextBox textBox = sender as TextBox;
+        //    if (textBox == null || !int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
+        //        return;
 
-            if (!double.TryParse(textBox.Text, out double amplitude))
-                return;
+        //    if (!double.TryParse(textBox.Text, out double amplitude))
+        //        return;
 
-            // Format the value for display
-            bool isPercentageMode = AmplitudePercentageMode.IsChecked == true;
-            double fundamentalAmplitude = rigolDG2072.GetAmplitude(activeChannel);
+        //    // Format the value for display
+        //    bool isPercentageMode = AmplitudePercentageMode.IsChecked == true;
+        //    double fundamentalAmplitude = rigolDG2072.GetAmplitude(activeChannel);
 
-            if (isPercentageMode)
-            {
-                // Format the display as percentage
-                textBox.Text = FormatWithMinimumDecimals(amplitude);
-                // Convert to absolute value for the device
-                amplitude = (amplitude / 100.0) * fundamentalAmplitude;
-            }
-            else
-            {
-                // Format for absolute mode
-                textBox.Text = FormatWithMinimumDecimals(amplitude);
-            }
+        //    if (isPercentageMode)
+        //    {
+        //        // Format the display as percentage
+        //        textBox.Text = FormatWithMinimumDecimals(amplitude);
+        //        // Convert to absolute value for the device
+        //        amplitude = (amplitude / 100.0) * fundamentalAmplitude;
+        //    }
+        //    else
+        //    {
+        //        // Format for absolute mode
+        //        textBox.Text = FormatWithMinimumDecimals(amplitude);
+        //    }
 
-            try
-            {
-                // Get current harmonic state
-                bool isEnabled = HarmonicsToggle.IsChecked == true;
-                if (isEnabled && harmonicNumber >= 2 && harmonicNumber <= 8)
-                {
-                    // Ensure the harmonic is enabled 
-                    CheckBox harmonicCheckbox = FindName($"Harmonic{harmonicNumber}CheckBox") as CheckBox;
-                    if (harmonicCheckbox != null && harmonicCheckbox.IsChecked == true)
-                    {
-                        // Set the amplitude on the device
-                        rigolDG2072.SetHarmonicAmplitude(activeChannel, harmonicNumber, amplitude);
-                        LogMessage($"Set harmonic {harmonicNumber} amplitude to {amplitude:F4}V");
+        //    try
+        //    {
+        //        // Get current harmonic state
+        //        bool isEnabled = HarmonicsToggle.IsChecked == true;
+        //        if (isEnabled && harmonicNumber >= 2 && harmonicNumber <= 8)
+        //        {
+        //            // Ensure the harmonic is enabled 
+        //            CheckBox harmonicCheckbox = FindName($"Harmonic{harmonicNumber}CheckBox") as CheckBox;
+        //            if (harmonicCheckbox != null && harmonicCheckbox.IsChecked == true)
+        //            {
+        //                // Set the amplitude on the device
+        //                rigolDG2072.SetHarmonicAmplitude(activeChannel, harmonicNumber, amplitude);
+        //                LogMessage($"Set harmonic {harmonicNumber} amplitude to {amplitude:F4}V");
 
-                        // Apply the change immediately
-                        ApplyHarmonicChange(harmonicNumber);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error setting harmonic amplitude: {ex.Message}");
-            }
-        }
+        //                // Apply the change immediately
+        //                ApplyHarmonicChange(harmonicNumber);
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error setting harmonic amplitude: {ex.Message}");
+        //    }
+        //}
 
         // For harmonic phase textboxes
-        private void HarmonicPhaseTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void HarmonicPhaseTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            TextBox textBox = sender as TextBox;
-            if (textBox == null || !int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
-                return;
+        //    TextBox textBox = sender as TextBox;
+        //    if (textBox == null || !int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
+        //        return;
 
-            if (!double.TryParse(textBox.Text, out double phase))
-                return;
+        //    if (!double.TryParse(textBox.Text, out double phase))
+        //        return;
 
-            // Normalize phase to 0-360 range
-            phase = ((phase % 360) + 360) % 360;
+        //    // Normalize phase to 0-360 range
+        //    phase = ((phase % 360) + 360) % 360;
 
-            // Format the value for display
-            textBox.Text = FormatWithMinimumDecimals(phase);
+        //    // Format the value for display
+        //    textBox.Text = FormatWithMinimumDecimals(phase);
 
-            try
-            {
-                // Get current harmonic state
-                bool isEnabled = HarmonicsToggle.IsChecked == true;
-                if (isEnabled && harmonicNumber >= 2 && harmonicNumber <= 8)
-                {
-                    // Ensure the harmonic is enabled 
-                    CheckBox harmonicCheckbox = FindName($"Harmonic{harmonicNumber}CheckBox") as CheckBox;
-                    if (harmonicCheckbox != null && harmonicCheckbox.IsChecked == true)
-                    {
-                        // Set the phase on the device
-                        rigolDG2072.SetHarmonicPhase(activeChannel, harmonicNumber, phase);
-                        LogMessage($"Set harmonic {harmonicNumber} phase to {phase:F1}°");
+        //    try
+        //    {
+        //        // Get current harmonic state
+        //        bool isEnabled = HarmonicsToggle.IsChecked == true;
+        //        if (isEnabled && harmonicNumber >= 2 && harmonicNumber <= 8)
+        //        {
+        //            // Ensure the harmonic is enabled 
+        //            CheckBox harmonicCheckbox = FindName($"Harmonic{harmonicNumber}CheckBox") as CheckBox;
+        //            if (harmonicCheckbox != null && harmonicCheckbox.IsChecked == true)
+        //            {
+        //                // Set the phase on the device
+        //                rigolDG2072.SetHarmonicPhase(activeChannel, harmonicNumber, phase);
+        //                LogMessage($"Set harmonic {harmonicNumber} phase to {phase:F1}°");
 
-                        // Apply the change immediately
-                        ApplyHarmonicChange(harmonicNumber);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error setting harmonic phase: {ex.Message}");
-            }
-        }
+        //                // Apply the change immediately
+        //                ApplyHarmonicChange(harmonicNumber);
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error setting harmonic phase: {ex.Message}");
+        //    }
+        //}
 
         // Improved ApplyHarmonicsButton_Click method with change detection
-        private void ApplyHarmonicsButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void ApplyHarmonicsButton_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            try
-            {
-                LogMessage("Applying harmonic settings...");
+        //    try
+        //    {
+        //        LogMessage("Applying harmonic settings...");
 
-                // Check if harmonics are enabled in UI
-                bool harmonicsEnabled = HarmonicsToggle.IsChecked == true;
-                if (!harmonicsEnabled)
-                {
-                    LogMessage("Harmonics are currently disabled. Please enable harmonics first.");
-                    return;
-                }
+        //        // Check if harmonics are enabled in UI
+        //        bool harmonicsEnabled = HarmonicsToggle.IsChecked == true;
+        //        if (!harmonicsEnabled)
+        //        {
+        //            LogMessage("Harmonics are currently disabled. Please enable harmonics first.");
+        //            return;
+        //        }
 
-                // CRITICAL CHANGE: Enable harmonics STATE first
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT ON");
-                System.Threading.Thread.Sleep(100);
+        //        // CRITICAL CHANGE: Enable harmonics STATE first
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT ON");
+        //        System.Threading.Thread.Sleep(100);
 
-                // Get current parameters
-                double frequency = rigolDG2072.GetFrequency(activeChannel);
-                double amplitude = rigolDG2072.GetAmplitude(activeChannel);
-                double offset = rigolDG2072.GetOffset(activeChannel);
-                double phase = rigolDG2072.GetPhase(activeChannel);
+        //        // Get current parameters
+        //        double frequency = rigolDG2072.GetFrequency(activeChannel);
+        //        double amplitude = rigolDG2072.GetAmplitude(activeChannel);
+        //        double offset = rigolDG2072.GetOffset(activeChannel);
+        //        double phase = rigolDG2072.GetPhase(activeChannel);
 
-                // Apply the harmonic waveform with parameters
-                rigolDG2072.SendCommand($":SOURce{activeChannel}:APPL:HARM {frequency},{amplitude},{offset},{phase}");
-                System.Threading.Thread.Sleep(100);
+        //        // Apply the harmonic waveform with parameters
+        //        rigolDG2072.SendCommand($":SOURce{activeChannel}:APPL:HARM {frequency},{amplitude},{offset},{phase}");
+        //        System.Threading.Thread.Sleep(100);
 
-                // Collect which harmonics are enabled
-                bool[] enabledArray = new bool[7]; // For harmonics 2-8
-                enabledArray[0] = Harmonic2CheckBox.IsChecked == true;
-                enabledArray[1] = Harmonic3CheckBox.IsChecked == true;
-                enabledArray[2] = Harmonic4CheckBox.IsChecked == true;
-                enabledArray[3] = Harmonic5CheckBox.IsChecked == true;
-                enabledArray[4] = Harmonic6CheckBox.IsChecked == true;
-                enabledArray[5] = Harmonic7CheckBox.IsChecked == true;
-                enabledArray[6] = Harmonic8CheckBox.IsChecked == true;
+        //        // Collect which harmonics are enabled
+        //        bool[] enabledArray = new bool[7]; // For harmonics 2-8
+        //        enabledArray[0] = Harmonic2CheckBox.IsChecked == true;
+        //        enabledArray[1] = Harmonic3CheckBox.IsChecked == true;
+        //        enabledArray[2] = Harmonic4CheckBox.IsChecked == true;
+        //        enabledArray[3] = Harmonic5CheckBox.IsChecked == true;
+        //        enabledArray[4] = Harmonic6CheckBox.IsChecked == true;
+        //        enabledArray[5] = Harmonic7CheckBox.IsChecked == true;
+        //        enabledArray[6] = Harmonic8CheckBox.IsChecked == true;
 
-                // Find the highest enabled harmonic
-                int highestHarmonic = 2;  // Default to 2
-                for (int i = 6; i >= 0; i--)
-                {
-                    if (enabledArray[i])
-                    {
-                        highestHarmonic = i + 2;
-                        break;
-                    }
-                }
+        //        // Find the highest enabled harmonic
+        //        int highestHarmonic = 2;  // Default to 2
+        //        for (int i = 6; i >= 0; i--)
+        //        {
+        //            if (enabledArray[i])
+        //            {
+        //                highestHarmonic = i + 2;
+        //                break;
+        //            }
+        //        }
 
-                // Check if any harmonics are enabled
-                bool anyHarmonicEnabled = enabledArray.Any(x => x);
-                if (!anyHarmonicEnabled)
-                {
-                    LogMessage("Warning: No harmonics are enabled. Please enable at least one harmonic.");
-                    MessageBox.Show("No harmonics are enabled. Please enable at least one harmonic by checking the box next to it.",
-                        "No Harmonics Enabled", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
+        //        // Check if any harmonics are enabled
+        //        bool anyHarmonicEnabled = enabledArray.Any(x => x);
+        //        if (!anyHarmonicEnabled)
+        //        {
+        //            LogMessage("Warning: No harmonics are enabled. Please enable at least one harmonic.");
+        //            MessageBox.Show("No harmonics are enabled. Please enable at least one harmonic by checking the box next to it.",
+        //                "No Harmonics Enabled", MessageBoxButton.OK, MessageBoxImage.Warning);
+        //            return;
+        //        }
 
-                // Set type to USER
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:TYPE USER");
-                System.Threading.Thread.Sleep(50);
+        //        // Set type to USER
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:TYPE USER");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Set order to highest enabled harmonic
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:ORDE {highestHarmonic}");
-                System.Threading.Thread.Sleep(50);
+        //        // Set order to highest enabled harmonic
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:ORDE {highestHarmonic}");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Create and set the user pattern based on enabled harmonics
-                string userPattern = BuildHarmonicPattern();
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER {userPattern}");
-                System.Threading.Thread.Sleep(50);
+        //        // Create and set the user pattern based on enabled harmonics
+        //        string userPattern = BuildHarmonicPattern();
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER {userPattern}");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Store new settings for change detection
-                bool[] _currentEnabledHarmonics = new bool[7];
-                Array.Copy(enabledArray, _currentEnabledHarmonics, 7);
+        //        // Store new settings for change detection
+        //        bool[] _currentEnabledHarmonics = new bool[7];
+        //        Array.Copy(enabledArray, _currentEnabledHarmonics, 7);
 
-                Dictionary<int, double> _currentAmplitudes = new Dictionary<int, double>();
-                Dictionary<int, double> _currentPhases = new Dictionary<int, double>();
+        //        Dictionary<int, double> _currentAmplitudes = new Dictionary<int, double>();
+        //        Dictionary<int, double> _currentPhases = new Dictionary<int, double>();
 
-                // Apply only enabled harmonics amplitude and phase - Harmonic scanning process
-                for (int harmonic = 2; harmonic <= 8; harmonic++)
-                {
-                    TextBox ampTextBox = FindName($"Harmonic{harmonic}AmplitudeTextBox") as TextBox;
-                    TextBox phaseTextBox = FindName($"Harmonic{harmonic}PhaseTextBox") as TextBox;
+        //        // Apply only enabled harmonics amplitude and phase - Harmonic scanning process
+        //        for (int harmonic = 2; harmonic <= 8; harmonic++)
+        //        {
+        //            TextBox ampTextBox = FindName($"Harmonic{harmonic}AmplitudeTextBox") as TextBox;
+        //            TextBox phaseTextBox = FindName($"Harmonic{harmonic}PhaseTextBox") as TextBox;
 
-                    double harmonicAmplitude = 0;
-                    double harmonicPhase = 0;
+        //            double harmonicAmplitude = 0;
+        //            double harmonicPhase = 0;
 
-                    // Only process harmonics that are enabled
-                    if (enabledArray[harmonic - 2])
-                    {
-                        // Get amplitude
-                        if (ampTextBox != null && double.TryParse(ampTextBox.Text, out harmonicAmplitude))
-                        {
-                            // Convert percentage to absolute if needed
-                            if (AmplitudePercentageMode.IsChecked == true)
-                            {
-                                harmonicAmplitude = (harmonicAmplitude / 100.0) * amplitude;
-                            }
+        //            // Only process harmonics that are enabled
+        //            if (enabledArray[harmonic - 2])
+        //            {
+        //                // Get amplitude
+        //                if (ampTextBox != null && double.TryParse(ampTextBox.Text, out harmonicAmplitude))
+        //                {
+        //                    // Convert percentage to absolute if needed
+        //                    if (AmplitudePercentageMode.IsChecked == true)
+        //                    {
+        //                        harmonicAmplitude = (harmonicAmplitude / 100.0) * amplitude;
+        //                    }
 
-                            // Store current value for change detection
-                            _currentAmplitudes[harmonic] = harmonicAmplitude;
+        //                    // Store current value for change detection
+        //                    _currentAmplitudes[harmonic] = harmonicAmplitude;
 
-                            // Check if changed from last value
-                            bool amplitudeChanged = !_lastAmplitudes.ContainsKey(harmonic) ||
-                                                   Math.Abs(_lastAmplitudes[harmonic] - harmonicAmplitude) > 0.0001;
+        //                    // Check if changed from last value
+        //                    bool amplitudeChanged = !_lastAmplitudes.ContainsKey(harmonic) ||
+        //                                           Math.Abs(_lastAmplitudes[harmonic] - harmonicAmplitude) > 0.0001;
 
-                            if (amplitudeChanged)
-                            {
-                                // Set amplitude for changed harmonics
-                                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},{harmonicAmplitude}");
-                                System.Threading.Thread.Sleep(30);
-                                LogMessage($"Setting harmonic {harmonic} amplitude to {harmonicAmplitude:F3}V");
-                            }
-                        }
+        //                    if (amplitudeChanged)
+        //                    {
+        //                        // Set amplitude for changed harmonics
+        //                        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},{harmonicAmplitude}");
+        //                        System.Threading.Thread.Sleep(30);
+        //                        LogMessage($"Setting harmonic {harmonic} amplitude to {harmonicAmplitude:F3}V");
+        //                    }
+        //                }
 
-                        // Get phase
-                        if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out harmonicPhase))
-                        {
-                            // Store current value for change detection
-                            _currentPhases[harmonic] = harmonicPhase;
+        //                // Get phase
+        //                if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out harmonicPhase))
+        //                {
+        //                    // Store current value for change detection
+        //                    _currentPhases[harmonic] = harmonicPhase;
 
-                            // Check if changed from last value
-                            bool phaseChanged = !_lastPhases.ContainsKey(harmonic) ||
-                                               Math.Abs(_lastPhases[harmonic] - harmonicPhase) > 0.0001;
+        //                    // Check if changed from last value
+        //                    bool phaseChanged = !_lastPhases.ContainsKey(harmonic) ||
+        //                                       Math.Abs(_lastPhases[harmonic] - harmonicPhase) > 0.0001;
 
-                            if (phaseChanged)
-                            {
-                                // Set phase for changed harmonics
-                                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:PHAS {harmonic},{harmonicPhase}");
-                                System.Threading.Thread.Sleep(30);
-                                LogMessage($"Setting harmonic {harmonic} phase to {harmonicPhase:F1}°");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // For disabled harmonics, set amplitude to 0 if previously enabled
-                        if (_lastEnabledHarmonics[harmonic - 2])
-                        {
-                            rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},0");
-                            System.Threading.Thread.Sleep(30);
-                        }
-                    }
-                }
+        //                    if (phaseChanged)
+        //                    {
+        //                        // Set phase for changed harmonics
+        //                        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:PHAS {harmonic},{harmonicPhase}");
+        //                        System.Threading.Thread.Sleep(30);
+        //                        LogMessage($"Setting harmonic {harmonic} phase to {harmonicPhase:F1}°");
+        //                    }
+        //                }
+        //            }
+        //            else
+        //            {
+        //                // For disabled harmonics, set amplitude to 0 if previously enabled
+        //                if (_lastEnabledHarmonics[harmonic - 2])
+        //                {
+        //                    rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},0");
+        //                    System.Threading.Thread.Sleep(30);
+        //                }
+        //            }
+        //        }
 
-                // Update stored values for next change detection
-                _lastAmplitudes = _currentAmplitudes;
-                _lastPhases = _currentPhases;
-                Array.Copy(enabledArray, _lastEnabledHarmonics, 7);
+        //        // Update stored values for next change detection
+        //        _lastAmplitudes = _currentAmplitudes;
+        //        _lastPhases = _currentPhases;
+        //        Array.Copy(enabledArray, _lastEnabledHarmonics, 7);
 
-                LogMessage("All harmonic settings applied successfully");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying harmonic settings: {ex.Message}");
-                MessageBox.Show($"Error applying harmonic settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
+        //        LogMessage("All harmonic settings applied successfully");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error applying harmonic settings: {ex.Message}");
+        //        MessageBox.Show($"Error applying harmonic settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        //    }
+        //}
 
         // method to update harmonic pattern
-        private void UpdateHarmonicPattern()
-        {
-            try
-            {
-                // Collect which harmonics are enabled
-                bool[] enabledArray = GetEnabledHarmonics();
+        //private void UpdateHarmonicPattern()
+        //{
+        //    try
+        //    {
+        //        // Collect which harmonics are enabled
+        //        bool[] enabledArray = GetEnabledHarmonics();
 
-                // Find the highest enabled harmonic
-                int highestHarmonic = 2;  // Default to 2
-                for (int i = 6; i >= 0; i--)
-                {
-                    if (enabledArray[i])
-                    {
-                        highestHarmonic = i + 2;
-                        break;
-                    }
-                }
+        //        // Find the highest enabled harmonic
+        //        int highestHarmonic = 2;  // Default to 2
+        //        for (int i = 6; i >= 0; i--)
+        //        {
+        //            if (enabledArray[i])
+        //            {
+        //                highestHarmonic = i + 2;
+        //                break;
+        //            }
+        //        }
 
-                // Check if any harmonics are enabled
-                bool anyHarmonicEnabled = enabledArray.Any(x => x);
-                if (!anyHarmonicEnabled)
-                {
-                    LogMessage("Warning: No harmonics are enabled.");
-                    return;
-                }
+        //        // Check if any harmonics are enabled
+        //        bool anyHarmonicEnabled = enabledArray.Any(x => x);
+        //        if (!anyHarmonicEnabled)
+        //        {
+        //            LogMessage("Warning: No harmonics are enabled.");
+        //            return;
+        //        }
 
-                // Set type to USER
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:TYPE USER");
-                System.Threading.Thread.Sleep(50);
+        //        // Set type to USER
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:TYPE USER");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Set order to highest enabled harmonic
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:ORDE {highestHarmonic}");
-                System.Threading.Thread.Sleep(50);
+        //        // Set order to highest enabled harmonic
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:ORDE {highestHarmonic}");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Create and set the user pattern
-                string userPattern = BuildHarmonicPattern();
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER {userPattern}");
-                System.Threading.Thread.Sleep(50);
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating harmonic pattern: {ex.Message}");
-            }
-        }
+        //        // Create and set the user pattern
+        //        string userPattern = BuildHarmonicPattern();
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER {userPattern}");
+        //        System.Threading.Thread.Sleep(50);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error updating harmonic pattern: {ex.Message}");
+        //    }
+        //}
 
         // method to apply a change to a specific harmonic
-        private void ApplyHarmonicChange(int harmonicNumber)
-        {
-            try
-            {
-                // Check if harmonics are enabled
-                bool isEnabled = HarmonicsToggle.IsChecked == true;
-                if (!isEnabled) return;
+        //private void ApplyHarmonicChange(int harmonicNumber)
+        //{
+        //    try
+        //    {
+        //        // Check if harmonics are enabled
+        //        bool isEnabled = HarmonicsToggle.IsChecked == true;
+        //        if (!isEnabled) return;
 
-                // Get current parameters
-                double frequency = rigolDG2072.GetFrequency(activeChannel);
-                double amplitude = rigolDG2072.GetAmplitude(activeChannel);
-                double offset = rigolDG2072.GetOffset(activeChannel);
-                double phase = rigolDG2072.GetPhase(activeChannel);
+        //        // Get current parameters
+        //        double frequency = rigolDG2072.GetFrequency(activeChannel);
+        //        double amplitude = rigolDG2072.GetAmplitude(activeChannel);
+        //        double offset = rigolDG2072.GetOffset(activeChannel);
+        //        double phase = rigolDG2072.GetPhase(activeChannel);
 
-                // Ensure harmonic state is on
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT ON");
-                System.Threading.Thread.Sleep(50);
+        //        // Ensure harmonic state is on
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT ON");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Store the updated value for change detection
-                if (harmonicNumber >= 2 && harmonicNumber <= 8)
-                {
-                    TextBox ampTextBox = FindName($"Harmonic{harmonicNumber}AmplitudeTextBox") as TextBox;
-                    TextBox phaseTextBox = FindName($"Harmonic{harmonicNumber}PhaseTextBox") as TextBox;
+        //        // Store the updated value for change detection
+        //        if (harmonicNumber >= 2 && harmonicNumber <= 8)
+        //        {
+        //            TextBox ampTextBox = FindName($"Harmonic{harmonicNumber}AmplitudeTextBox") as TextBox;
+        //            TextBox phaseTextBox = FindName($"Harmonic{harmonicNumber}PhaseTextBox") as TextBox;
 
-                    if (ampTextBox != null && double.TryParse(ampTextBox.Text, out double harmonicAmplitude))
-                    {
-                        // Convert percentage to absolute if needed
-                        if (AmplitudePercentageMode.IsChecked == true)
-                        {
-                            harmonicAmplitude = (harmonicAmplitude / 100.0) * amplitude;
-                        }
+        //            if (ampTextBox != null && double.TryParse(ampTextBox.Text, out double harmonicAmplitude))
+        //            {
+        //                // Convert percentage to absolute if needed
+        //                if (AmplitudePercentageMode.IsChecked == true)
+        //                {
+        //                    harmonicAmplitude = (harmonicAmplitude / 100.0) * amplitude;
+        //                }
 
-                        // Store current value for change detection
-                        _lastAmplitudes[harmonicNumber] = harmonicAmplitude;
-                    }
+        //                // Store current value for change detection
+        //                _lastAmplitudes[harmonicNumber] = harmonicAmplitude;
+        //            }
 
-                    if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out double harmonicPhase))
-                    {
-                        // Store current value for change detection
-                        _lastPhases[harmonicNumber] = harmonicPhase;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying harmonic change: {ex.Message}");
-            }
-        }
+        //            if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out double harmonicPhase))
+        //            {
+        //                // Store current value for change detection
+        //                _lastPhases[harmonicNumber] = harmonicPhase;
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error applying harmonic change: {ex.Message}");
+        //    }
+        //}
 
         //HarmonicCheckBox_Changed method to better handle pattern updates
-        private void HarmonicCheckBox_Changed(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void HarmonicCheckBox_Changed(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            CheckBox checkBox = sender as CheckBox;
-            if (checkBox == null || !int.TryParse(checkBox.Tag.ToString(), out int harmonicNumber))
-                return;
+        //    CheckBox checkBox = sender as CheckBox;
+        //    if (checkBox == null || !int.TryParse(checkBox.Tag.ToString(), out int harmonicNumber))
+        //        return;
 
-            bool isChecked = checkBox.IsChecked == true;
-            LogMessage($"Harmonic {harmonicNumber} {(isChecked ? "enabled" : "disabled")}");
+        //    bool isChecked = checkBox.IsChecked == true;
+        //    LogMessage($"Harmonic {harmonicNumber} {(isChecked ? "enabled" : "disabled")}");
 
-            try
-            {
-                // Get current harmonic state
-                bool harmonicsEnabled = HarmonicsToggle.IsChecked == true;
-                if (harmonicsEnabled)
-                {
-                    // Update the user pattern and apply immediately
-                    UpdateHarmonicPattern();
+        //    try
+        //    {
+        //        // Get current harmonic state
+        //        bool harmonicsEnabled = HarmonicsToggle.IsChecked == true;
+        //        if (harmonicsEnabled)
+        //        {
+        //            // Update the user pattern and apply immediately
+        //            UpdateHarmonicPattern();
 
-                    // If being enabled, also apply stored amplitude and phase
-                    if (isChecked)
-                    {
-                        // Get amplitude value
-                        TextBox ampTextBox = FindName($"Harmonic{harmonicNumber}AmplitudeTextBox") as TextBox;
-                        if (ampTextBox != null && double.TryParse(ampTextBox.Text, out double amplitude))
-                        {
-                            // Convert percentage to absolute if needed
-                            if (AmplitudePercentageMode.IsChecked == true)
-                            {
-                                double fundamentalAmplitude = rigolDG2072.GetAmplitude(activeChannel);
-                                amplitude = (amplitude / 100.0) * fundamentalAmplitude;
-                            }
+        //            // If being enabled, also apply stored amplitude and phase
+        //            if (isChecked)
+        //            {
+        //                // Get amplitude value
+        //                TextBox ampTextBox = FindName($"Harmonic{harmonicNumber}AmplitudeTextBox") as TextBox;
+        //                if (ampTextBox != null && double.TryParse(ampTextBox.Text, out double amplitude))
+        //                {
+        //                    // Convert percentage to absolute if needed
+        //                    if (AmplitudePercentageMode.IsChecked == true)
+        //                    {
+        //                        double fundamentalAmplitude = rigolDG2072.GetAmplitude(activeChannel);
+        //                        amplitude = (amplitude / 100.0) * fundamentalAmplitude;
+        //                    }
 
-                            rigolDG2072.SetHarmonicAmplitude(activeChannel, harmonicNumber, amplitude);
-                        }
+        //                    rigolDG2072.SetHarmonicAmplitude(activeChannel, harmonicNumber, amplitude);
+        //                }
 
-                        // Get phase value
-                        TextBox phaseTextBox = FindName($"Harmonic{harmonicNumber}PhaseTextBox") as TextBox;
-                        if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out double phase))
-                        {
-                            rigolDG2072.SetHarmonicPhase(activeChannel, harmonicNumber, phase);
-                        }
-                    }
+        //                // Get phase value
+        //                TextBox phaseTextBox = FindName($"Harmonic{harmonicNumber}PhaseTextBox") as TextBox;
+        //                if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out double phase))
+        //                {
+        //                    rigolDG2072.SetHarmonicPhase(activeChannel, harmonicNumber, phase);
+        //                }
+        //            }
 
-                    // Apply the full change
-                    ApplyFullHarmonicSettings();
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating harmonic selection: {ex.Message}");
-            }
-        }
+        //            // Apply the full change
+        //            ApplyFullHarmonicSettings();
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error updating harmonic selection: {ex.Message}");
+        //    }
+        //}
 
         // method to apply all harmonic settings - modified version of ApplyHarmonicsButton_Click
-        private void ApplyFullHarmonicSettings()
-        {
-            try
-            {
-                LogMessage("Applying harmonic settings...");
+        //private void ApplyFullHarmonicSettings()
+        //{
+        //    try
+        //    {
+        //        LogMessage("Applying harmonic settings...");
 
-                // Check if harmonics are enabled in UI
-                bool harmonicsEnabled = HarmonicsToggle.IsChecked == true;
-                if (!harmonicsEnabled)
-                {
-                    LogMessage("Harmonics are currently disabled.");
-                    return;
-                }
+        //        // Check if harmonics are enabled in UI
+        //        bool harmonicsEnabled = HarmonicsToggle.IsChecked == true;
+        //        if (!harmonicsEnabled)
+        //        {
+        //            LogMessage("Harmonics are currently disabled.");
+        //            return;
+        //        }
 
-                // CRITICAL CHANGE: Enable harmonics STATE first
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT ON");
-                System.Threading.Thread.Sleep(100);
+        //        // CRITICAL CHANGE: Enable harmonics STATE first
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT ON");
+        //        System.Threading.Thread.Sleep(100);
 
-                // Get current parameters
-                double frequency = rigolDG2072.GetFrequency(activeChannel);
-                double amplitude = rigolDG2072.GetAmplitude(activeChannel);
-                double offset = rigolDG2072.GetOffset(activeChannel);
-                double phase = rigolDG2072.GetPhase(activeChannel);
+        //        // Get current parameters
+        //        double frequency = rigolDG2072.GetFrequency(activeChannel);
+        //        double amplitude = rigolDG2072.GetAmplitude(activeChannel);
+        //        double offset = rigolDG2072.GetOffset(activeChannel);
+        //        double phase = rigolDG2072.GetPhase(activeChannel);
 
-                // Apply the harmonic waveform with parameters
-                rigolDG2072.SendCommand($":SOURce{activeChannel}:APPL:HARM {frequency},{amplitude},{offset},{phase}");
-                System.Threading.Thread.Sleep(100);
+        //        // Apply the harmonic waveform with parameters
+        //        rigolDG2072.SendCommand($":SOURce{activeChannel}:APPL:HARM {frequency},{amplitude},{offset},{phase}");
+        //        System.Threading.Thread.Sleep(100);
 
-                // Collect which harmonics are enabled
-                bool[] enabledArray = GetEnabledHarmonics();
+        //        // Collect which harmonics are enabled
+        //        bool[] enabledArray = GetEnabledHarmonics();
 
-                // Find the highest enabled harmonic
-                int highestHarmonic = 2;  // Default to 2
-                for (int i = 6; i >= 0; i--)
-                {
-                    if (enabledArray[i])
-                    {
-                        highestHarmonic = i + 2;
-                        break;
-                    }
-                }
+        //        // Find the highest enabled harmonic
+        //        int highestHarmonic = 2;  // Default to 2
+        //        for (int i = 6; i >= 0; i--)
+        //        {
+        //            if (enabledArray[i])
+        //            {
+        //                highestHarmonic = i + 2;
+        //                break;
+        //            }
+        //        }
 
-                // Check if any harmonics are enabled
-                bool anyHarmonicEnabled = enabledArray.Any(x => x);
-                if (!anyHarmonicEnabled)
-                {
-                    LogMessage("Warning: No harmonics are enabled. Please enable at least one harmonic.");
-                    return;
-                }
+        //        // Check if any harmonics are enabled
+        //        bool anyHarmonicEnabled = enabledArray.Any(x => x);
+        //        if (!anyHarmonicEnabled)
+        //        {
+        //            LogMessage("Warning: No harmonics are enabled. Please enable at least one harmonic.");
+        //            return;
+        //        }
 
-                // Set type to USER
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:TYPE USER");
-                System.Threading.Thread.Sleep(50);
+        //        // Set type to USER
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:TYPE USER");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Set order to highest enabled harmonic
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:ORDE {highestHarmonic}");
-                System.Threading.Thread.Sleep(50);
+        //        // Set order to highest enabled harmonic
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:ORDE {highestHarmonic}");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Create and set the user pattern based on enabled harmonics
-                string userPattern = BuildHarmonicPattern();
-                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER {userPattern}");
-                System.Threading.Thread.Sleep(50);
+        //        // Create and set the user pattern based on enabled harmonics
+        //        string userPattern = BuildHarmonicPattern();
+        //        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER {userPattern}");
+        //        System.Threading.Thread.Sleep(50);
 
-                // Store new settings for change detection
-                Array.Copy(enabledArray, _lastEnabledHarmonics, 7);
+        //        // Store new settings for change detection
+        //        Array.Copy(enabledArray, _lastEnabledHarmonics, 7);
 
-                Dictionary<int, double> _currentAmplitudes = new Dictionary<int, double>();
-                Dictionary<int, double> _currentPhases = new Dictionary<int, double>();
+        //        Dictionary<int, double> _currentAmplitudes = new Dictionary<int, double>();
+        //        Dictionary<int, double> _currentPhases = new Dictionary<int, double>();
 
-                // Apply only enabled harmonics amplitude and phase
-                for (int harmonic = 2; harmonic <= 8; harmonic++)
-                {
-                    TextBox ampTextBox = FindName($"Harmonic{harmonic}AmplitudeTextBox") as TextBox;
-                    TextBox phaseTextBox = FindName($"Harmonic{harmonic}PhaseTextBox") as TextBox;
+        //        // Apply only enabled harmonics amplitude and phase
+        //        for (int harmonic = 2; harmonic <= 8; harmonic++)
+        //        {
+        //            TextBox ampTextBox = FindName($"Harmonic{harmonic}AmplitudeTextBox") as TextBox;
+        //            TextBox phaseTextBox = FindName($"Harmonic{harmonic}PhaseTextBox") as TextBox;
 
-                    double harmonicAmplitude = 0;
-                    double harmonicPhase = 0;
+        //            double harmonicAmplitude = 0;
+        //            double harmonicPhase = 0;
 
-                    // Only process harmonics that are enabled
-                    if (enabledArray[harmonic - 2])
-                    {
-                        // Get amplitude
-                        if (ampTextBox != null && double.TryParse(ampTextBox.Text, out harmonicAmplitude))
-                        {
-                            // Convert percentage to absolute if needed
-                            if (AmplitudePercentageMode.IsChecked == true)
-                            {
-                                harmonicAmplitude = (harmonicAmplitude / 100.0) * amplitude;
-                            }
+        //            // Only process harmonics that are enabled
+        //            if (enabledArray[harmonic - 2])
+        //            {
+        //                // Get amplitude
+        //                if (ampTextBox != null && double.TryParse(ampTextBox.Text, out harmonicAmplitude))
+        //                {
+        //                    // Convert percentage to absolute if needed
+        //                    if (AmplitudePercentageMode.IsChecked == true)
+        //                    {
+        //                        harmonicAmplitude = (harmonicAmplitude / 100.0) * amplitude;
+        //                    }
 
-                            // Store current value for change detection
-                            _currentAmplitudes[harmonic] = harmonicAmplitude;
+        //                    // Store current value for change detection
+        //                    _currentAmplitudes[harmonic] = harmonicAmplitude;
 
-                            // Check if changed from last value
-                            bool amplitudeChanged = !_lastAmplitudes.ContainsKey(harmonic) ||
-                                                   Math.Abs(_lastAmplitudes[harmonic] - harmonicAmplitude) > 0.0001;
+        //                    // Check if changed from last value
+        //                    bool amplitudeChanged = !_lastAmplitudes.ContainsKey(harmonic) ||
+        //                                           Math.Abs(_lastAmplitudes[harmonic] - harmonicAmplitude) > 0.0001;
 
-                            if (amplitudeChanged)
-                            {
-                                // Set amplitude for changed harmonics
-                                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},{harmonicAmplitude}");
-                                System.Threading.Thread.Sleep(30);
-                                LogMessage($"Setting harmonic {harmonic} amplitude to {harmonicAmplitude:F3}V");
-                            }
-                        }
+        //                    if (amplitudeChanged)
+        //                    {
+        //                        // Set amplitude for changed harmonics
+        //                        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},{harmonicAmplitude}");
+        //                        System.Threading.Thread.Sleep(30);
+        //                        LogMessage($"Setting harmonic {harmonic} amplitude to {harmonicAmplitude:F3}V");
+        //                    }
+        //                }
 
-                        // Get phase
-                        if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out harmonicPhase))
-                        {
-                            // Store current value for change detection
-                            _currentPhases[harmonic] = harmonicPhase;
+        //                // Get phase
+        //                if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out harmonicPhase))
+        //                {
+        //                    // Store current value for change detection
+        //                    _currentPhases[harmonic] = harmonicPhase;
 
-                            // Check if changed from last value
-                            bool phaseChanged = !_lastPhases.ContainsKey(harmonic) ||
-                                               Math.Abs(_lastPhases[harmonic] - harmonicPhase) > 0.0001;
+        //                    // Check if changed from last value
+        //                    bool phaseChanged = !_lastPhases.ContainsKey(harmonic) ||
+        //                                       Math.Abs(_lastPhases[harmonic] - harmonicPhase) > 0.0001;
 
-                            if (phaseChanged)
-                            {
-                                // Set phase for changed harmonics
-                                rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:PHAS {harmonic},{harmonicPhase}");
-                                System.Threading.Thread.Sleep(30);
-                                LogMessage($"Setting harmonic {harmonic} phase to {harmonicPhase:F1}°");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // For disabled harmonics, set amplitude to 0 if previously enabled
-                        if (_lastEnabledHarmonics[harmonic - 2])
-                        {
-                            rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},0");
-                            System.Threading.Thread.Sleep(30);
-                        }
-                    }
-                }
+        //                    if (phaseChanged)
+        //                    {
+        //                        // Set phase for changed harmonics
+        //                        rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:PHAS {harmonic},{harmonicPhase}");
+        //                        System.Threading.Thread.Sleep(30);
+        //                        LogMessage($"Setting harmonic {harmonic} phase to {harmonicPhase:F1}°");
+        //                    }
+        //                }
+        //            }
+        //            else
+        //            {
+        //                // For disabled harmonics, set amplitude to 0 if previously enabled
+        //                if (_lastEnabledHarmonics[harmonic - 2])
+        //                {
+        //                    rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:AMPL {harmonic},0");
+        //                    System.Threading.Thread.Sleep(30);
+        //                }
+        //            }
+        //        }
 
-                // Update stored values for next change detection
-                _lastAmplitudes = _currentAmplitudes;
-                _lastPhases = _currentPhases;
-                Array.Copy(enabledArray, _lastEnabledHarmonics, 7);
+        //        // Update stored values for next change detection
+        //        _lastAmplitudes = _currentAmplitudes;
+        //        _lastPhases = _currentPhases;
+        //        Array.Copy(enabledArray, _lastEnabledHarmonics, 7);
 
-                LogMessage("All harmonic settings applied successfully");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying harmonic settings: {ex.Message}");
-            }
-        }
+        //        LogMessage("All harmonic settings applied successfully");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error applying harmonic settings: {ex.Message}");
+        //    }
+        //}
 
         //Modify the HarmonicsToggle_Click method to update behavior
-        private void HarmonicsToggle_Click(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void HarmonicsToggle_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            bool isEnabled = HarmonicsToggle.IsChecked == true;
-            HarmonicsToggle.Content = isEnabled ? "ENABLED" : "DISABLED";
+        //    bool isEnabled = HarmonicsToggle.IsChecked == true;
+        //    HarmonicsToggle.Content = isEnabled ? "ENABLED" : "DISABLED";
 
-            try
-            {
-                if (isEnabled)
-                {
-                    // ENABLED state
-                    // Make sure the waveform is set to HARMONIC in the UI
-                    foreach (ComboBoxItem item in ChannelWaveformComboBox.Items)
-                    {
-                        if (item.Content.ToString().ToUpper() == "HARMONIC")
-                        {
-                            ChannelWaveformComboBox.SelectedItem = item;
-                            break;
-                        }
-                    }
+        //    try
+        //    {
+        //        if (isEnabled)
+        //        {
+        //            // ENABLED state
+        //            // Make sure the waveform is set to HARMONIC in the UI
+        //            foreach (ComboBoxItem item in ChannelWaveformComboBox.Items)
+        //            {
+        //                if (item.Content.ToString().ToUpper() == "HARMONIC")
+        //                {
+        //                    ChannelWaveformComboBox.SelectedItem = item;
+        //                    break;
+        //                }
+        //            }
 
-                    // Enable harmonic UI elements
-                    SetHarmonicUIElementsState(true);
+        //            // Enable harmonic UI elements
+        //            SetHarmonicUIElementsState(true);
 
-                    // Check if there are any harmonics already configured
-                    bool anyHarmonicEnabled = false;
-                    for (int i = 2; i <= 8; i++)
-                    {
-                        CheckBox checkBox = FindName($"Harmonic{i}CheckBox") as CheckBox;
-                        TextBox ampTextBox = FindName($"Harmonic{i}AmplitudeTextBox") as TextBox;
+        //            // Check if there are any harmonics already configured
+        //            bool anyHarmonicEnabled = false;
+        //            for (int i = 2; i <= 8; i++)
+        //            {
+        //                CheckBox checkBox = FindName($"Harmonic{i}CheckBox") as CheckBox;
+        //                TextBox ampTextBox = FindName($"Harmonic{i}AmplitudeTextBox") as TextBox;
 
-                        // Consider a harmonic enabled if it's checked or has a non-zero amplitude
-                        if ((checkBox != null && checkBox.IsChecked == true) ||
-                            (ampTextBox != null && double.TryParse(ampTextBox.Text, out double amp) && amp > 0))
-                        {
-                            anyHarmonicEnabled = true;
-                            break;
-                        }
-                    }
+        //                // Consider a harmonic enabled if it's checked or has a non-zero amplitude
+        //                if ((checkBox != null && checkBox.IsChecked == true) ||
+        //                    (ampTextBox != null && double.TryParse(ampTextBox.Text, out double amp) && amp > 0))
+        //                {
+        //                    anyHarmonicEnabled = true;
+        //                    break;
+        //                }
+        //            }
 
-                    if (anyHarmonicEnabled)
-                    {
-                        // If we have harmonics already set up, auto-apply the settings
-                        LogMessage("Harmonics enabled. Auto-applying current harmonic settings...");
-                        // Auto-trigger the apply functionality
-                        ApplyFullHarmonicSettings();
-                    }
-                    else
-                    {
-                        LogMessage("Harmonics enabled. Adjust parameters to apply settings automatically.");
-                    }
-                }
-                else
-                {
-                    // DISABLED state
-                    // Turn off harmonics on device but preserve UI values
-                    rigolDG2072.SetHarmonicState(activeChannel, false);
+        //            if (anyHarmonicEnabled)
+        //            {
+        //                // If we have harmonics already set up, auto-apply the settings
+        //                LogMessage("Harmonics enabled. Auto-applying current harmonic settings...");
+        //                // Auto-trigger the apply functionality
+        //                ApplyFullHarmonicSettings();
+        //            }
+        //            else
+        //            {
+        //                LogMessage("Harmonics enabled. Adjust parameters to apply settings automatically.");
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // DISABLED state
+        //            // Turn off harmonics on device but preserve UI values
+        //            rigolDG2072.SetHarmonicState(activeChannel, false);
 
-                    // Add the new command to reset all harmonics in the user pattern
-                    rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER X0000000");
-                    LogMessage($"Harmonics disabled for Channel {activeChannel} and user pattern reset");
+        //            // Add the new command to reset all harmonics in the user pattern
+        //            rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:USER X0000000");
+        //            LogMessage($"Harmonics disabled for Channel {activeChannel} and user pattern reset");
 
-                    // Set UI elements to read-only but preserve their values
-                    SetHarmonicUIElementsState(false);
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error toggling harmonics: {ex.Message}");
-                MessageBox.Show($"Error toggling harmonics: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
+        //            // Set UI elements to read-only but preserve their values
+        //            SetHarmonicUIElementsState(false);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error toggling harmonics: {ex.Message}");
+        //        MessageBox.Show($"Error toggling harmonics: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        //    }
+        //}
 
         // Helper method to build harmonic pattern - used only in ApplyHarmonicsButton_Click
-        private string BuildHarmonicPattern()
-        {
-            // Build current harmonic pattern based on all checkboxes
-            bool[] enabledHarmonics = new bool[7];
-            enabledHarmonics[0] = Harmonic2CheckBox.IsChecked == true;
-            enabledHarmonics[1] = Harmonic3CheckBox.IsChecked == true;
-            enabledHarmonics[2] = Harmonic4CheckBox.IsChecked == true;
-            enabledHarmonics[3] = Harmonic5CheckBox.IsChecked == true;
-            enabledHarmonics[4] = Harmonic6CheckBox.IsChecked == true;
-            enabledHarmonics[5] = Harmonic7CheckBox.IsChecked == true;
-            enabledHarmonics[6] = Harmonic8CheckBox.IsChecked == true;
+        //private string BuildHarmonicPattern()
+        //{
+        //    // Build current harmonic pattern based on all checkboxes
+        //    bool[] enabledHarmonics = new bool[7];
+        //    enabledHarmonics[0] = Harmonic2CheckBox.IsChecked == true;
+        //    enabledHarmonics[1] = Harmonic3CheckBox.IsChecked == true;
+        //    enabledHarmonics[2] = Harmonic4CheckBox.IsChecked == true;
+        //    enabledHarmonics[3] = Harmonic5CheckBox.IsChecked == true;
+        //    enabledHarmonics[4] = Harmonic6CheckBox.IsChecked == true;
+        //    enabledHarmonics[5] = Harmonic7CheckBox.IsChecked == true;
+        //    enabledHarmonics[6] = Harmonic8CheckBox.IsChecked == true;
 
-            // Build the pattern string
-            char[] pattern = new char[8];
-            pattern[0] = 'X'; // Fundamental always enabled
-            for (int i = 0; i < 7; i++)
-            {
-                pattern[i + 1] = enabledHarmonics[i] ? '1' : '0';
-            }
-            return new string(pattern);
-        }
+        //    // Build the pattern string
+        //    char[] pattern = new char[8];
+        //    pattern[0] = 'X'; // Fundamental always enabled
+        //    for (int i = 0; i < 7; i++)
+        //    {
+        //        pattern[i + 1] = enabledHarmonics[i] ? '1' : '0';
+        //    }
+        //    return new string(pattern);
+        //}
 
         //method to reset harmonic values to zero
-        private void ResetHarmonicValues()
-        {
-            // Reset amplitude values
-            Harmonic2AmplitudeTextBox.Text = "0.0";
-            Harmonic3AmplitudeTextBox.Text = "0.0";
-            Harmonic4AmplitudeTextBox.Text = "0.0";
-            Harmonic5AmplitudeTextBox.Text = "0.0";
-            Harmonic6AmplitudeTextBox.Text = "0.0";
-            Harmonic7AmplitudeTextBox.Text = "0.0";
-            Harmonic8AmplitudeTextBox.Text = "0.0";
+        //private void ResetHarmonicValues()
+        //{
+        //    // Reset amplitude values
+        //    Harmonic2AmplitudeTextBox.Text = "0.0";
+        //    Harmonic3AmplitudeTextBox.Text = "0.0";
+        //    Harmonic4AmplitudeTextBox.Text = "0.0";
+        //    Harmonic5AmplitudeTextBox.Text = "0.0";
+        //    Harmonic6AmplitudeTextBox.Text = "0.0";
+        //    Harmonic7AmplitudeTextBox.Text = "0.0";
+        //    Harmonic8AmplitudeTextBox.Text = "0.0";
 
-            // Reset phase values
-            Harmonic2PhaseTextBox.Text = "0.0";
-            Harmonic3PhaseTextBox.Text = "0.0";
-            Harmonic4PhaseTextBox.Text = "0.0";
-            Harmonic5PhaseTextBox.Text = "0.0";
-            Harmonic6PhaseTextBox.Text = "0.0";
-            Harmonic7PhaseTextBox.Text = "0.0";
-            Harmonic8PhaseTextBox.Text = "0.0";
+        //    // Reset phase values
+        //    Harmonic2PhaseTextBox.Text = "0.0";
+        //    Harmonic3PhaseTextBox.Text = "0.0";
+        //    Harmonic4PhaseTextBox.Text = "0.0";
+        //    Harmonic5PhaseTextBox.Text = "0.0";
+        //    Harmonic6PhaseTextBox.Text = "0.0";
+        //    Harmonic7PhaseTextBox.Text = "0.0";
+        //    Harmonic8PhaseTextBox.Text = "0.0";
 
-            // Uncheck all harmonics
-            Harmonic2CheckBox.IsChecked = false;
-            Harmonic3CheckBox.IsChecked = false;
-            Harmonic4CheckBox.IsChecked = false;
-            Harmonic5CheckBox.IsChecked = false;
-            Harmonic6CheckBox.IsChecked = false;
-            Harmonic7CheckBox.IsChecked = false;
-            Harmonic8CheckBox.IsChecked = false;
-        }
+        //    // Uncheck all harmonics
+        //    Harmonic2CheckBox.IsChecked = false;
+        //    Harmonic3CheckBox.IsChecked = false;
+        //    Harmonic4CheckBox.IsChecked = false;
+        //    Harmonic5CheckBox.IsChecked = false;
+        //    Harmonic6CheckBox.IsChecked = false;
+        //    Harmonic7CheckBox.IsChecked = false;
+        //    Harmonic8CheckBox.IsChecked = false;
+        //}
 
         //method to control harmonic UI elements state
-        private void SetHarmonicUIElementsState(bool enabled)
-        {
-            // Set the read-only state for all harmonic controls
-            Harmonic2CheckBox.IsEnabled = enabled;
-            Harmonic3CheckBox.IsEnabled = enabled;
-            Harmonic4CheckBox.IsEnabled = enabled;
-            Harmonic5CheckBox.IsEnabled = enabled;
-            Harmonic6CheckBox.IsEnabled = enabled;
-            Harmonic7CheckBox.IsEnabled = enabled;
-            Harmonic8CheckBox.IsEnabled = enabled;
+        //private void SetHarmonicUIElementsState(bool enabled)
+        //{
+        //    // Set the read-only state for all harmonic controls
+        //    Harmonic2CheckBox.IsEnabled = enabled;
+        //    Harmonic3CheckBox.IsEnabled = enabled;
+        //    Harmonic4CheckBox.IsEnabled = enabled;
+        //    Harmonic5CheckBox.IsEnabled = enabled;
+        //    Harmonic6CheckBox.IsEnabled = enabled;
+        //    Harmonic7CheckBox.IsEnabled = enabled;
+        //    Harmonic8CheckBox.IsEnabled = enabled;
 
-            Harmonic2AmplitudeTextBox.IsReadOnly = !enabled;
-            Harmonic3AmplitudeTextBox.IsReadOnly = !enabled;
-            Harmonic4AmplitudeTextBox.IsReadOnly = !enabled;
-            Harmonic5AmplitudeTextBox.IsReadOnly = !enabled;
-            Harmonic6AmplitudeTextBox.IsReadOnly = !enabled;
-            Harmonic7AmplitudeTextBox.IsReadOnly = !enabled;
-            Harmonic8AmplitudeTextBox.IsReadOnly = !enabled;
+        //    Harmonic2AmplitudeTextBox.IsReadOnly = !enabled;
+        //    Harmonic3AmplitudeTextBox.IsReadOnly = !enabled;
+        //    Harmonic4AmplitudeTextBox.IsReadOnly = !enabled;
+        //    Harmonic5AmplitudeTextBox.IsReadOnly = !enabled;
+        //    Harmonic6AmplitudeTextBox.IsReadOnly = !enabled;
+        //    Harmonic7AmplitudeTextBox.IsReadOnly = !enabled;
+        //    Harmonic8AmplitudeTextBox.IsReadOnly = !enabled;
 
-            Harmonic2PhaseTextBox.IsReadOnly = !enabled;
-            Harmonic3PhaseTextBox.IsReadOnly = !enabled;
-            Harmonic4PhaseTextBox.IsReadOnly = !enabled;
-            Harmonic5PhaseTextBox.IsReadOnly = !enabled;
-            Harmonic6PhaseTextBox.IsReadOnly = !enabled;
-            Harmonic7PhaseTextBox.IsReadOnly = !enabled;
-            Harmonic8PhaseTextBox.IsReadOnly = !enabled;
+        //    Harmonic2PhaseTextBox.IsReadOnly = !enabled;
+        //    Harmonic3PhaseTextBox.IsReadOnly = !enabled;
+        //    Harmonic4PhaseTextBox.IsReadOnly = !enabled;
+        //    Harmonic5PhaseTextBox.IsReadOnly = !enabled;
+        //    Harmonic6PhaseTextBox.IsReadOnly = !enabled;
+        //    Harmonic7PhaseTextBox.IsReadOnly = !enabled;
+        //    Harmonic8PhaseTextBox.IsReadOnly = !enabled;
 
-            AmplitudePercentageMode.IsEnabled = enabled;
-            AmplitudeAbsoluteMode.IsEnabled = enabled;
-            //ApplyHarmonicsButton.IsEnabled = enabled;
-        }
+        //    AmplitudePercentageMode.IsEnabled = enabled;
+        //    AmplitudeAbsoluteMode.IsEnabled = enabled;
+        //    //ApplyHarmonicsButton.IsEnabled = enabled;
+        //}
 
         // Keep track of most recent harmonic settings to enable change detection
-        private Dictionary<int, double> _lastAmplitudes = new Dictionary<int, double>();
-        private Dictionary<int, double> _lastPhases = new Dictionary<int, double>();
-        private bool[] _lastEnabledHarmonics = new bool[7];
+        //private Dictionary<int, double> _lastAmplitudes = new Dictionary<int, double>();
+        //private Dictionary<int, double> _lastPhases = new Dictionary<int, double>();
+        //private bool[] _lastEnabledHarmonics = new bool[7];
 
         // Helper method to get enabled harmonics
-        private bool[] GetEnabledHarmonics()
-        {
-            bool[] enabledHarmonics = new bool[7]; // For harmonics 2-8
+        //private bool[] GetEnabledHarmonics()
+        //{
+        //    bool[] enabledHarmonics = new bool[7]; // For harmonics 2-8
 
-            enabledHarmonics[0] = Harmonic2CheckBox.IsChecked == true;
-            enabledHarmonics[1] = Harmonic3CheckBox.IsChecked == true;
-            enabledHarmonics[2] = Harmonic4CheckBox.IsChecked == true;
-            enabledHarmonics[3] = Harmonic5CheckBox.IsChecked == true;
-            enabledHarmonics[4] = Harmonic6CheckBox.IsChecked == true;
-            enabledHarmonics[5] = Harmonic7CheckBox.IsChecked == true;
-            enabledHarmonics[6] = Harmonic8CheckBox.IsChecked == true;
+        //    enabledHarmonics[0] = Harmonic2CheckBox.IsChecked == true;
+        //    enabledHarmonics[1] = Harmonic3CheckBox.IsChecked == true;
+        //    enabledHarmonics[2] = Harmonic4CheckBox.IsChecked == true;
+        //    enabledHarmonics[3] = Harmonic5CheckBox.IsChecked == true;
+        //    enabledHarmonics[4] = Harmonic6CheckBox.IsChecked == true;
+        //    enabledHarmonics[5] = Harmonic7CheckBox.IsChecked == true;
+        //    enabledHarmonics[6] = Harmonic8CheckBox.IsChecked == true;
 
-            return enabledHarmonics;
-        }
+        //    return enabledHarmonics;
+        //}
 
         // Helper method to get harmonic amplitudes
-        private Dictionary<int, double> GetHarmonicAmplitudes()
-        {
-            Dictionary<int, double> amplitudes = new Dictionary<int, double>();
+        //private Dictionary<int, double> GetHarmonicAmplitudes()
+        //{
+        //    Dictionary<int, double> amplitudes = new Dictionary<int, double>();
 
-            // Add fundamental amplitude (from main amplitude control)
-            if (double.TryParse(ChannelAmplitudeTextBox.Text, out double fundamentalAmplitude))
-            {
-                string ampUnit = Services.UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
-                double ampMultiplier = Services.UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                amplitudes[1] = fundamentalAmplitude * ampMultiplier;
-            }
+        //    // Add fundamental amplitude (from main amplitude control)
+        //    if (double.TryParse(ChannelAmplitudeTextBox.Text, out double fundamentalAmplitude))
+        //    {
+        //        string ampUnit = Services.UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
+        //        double ampMultiplier = Services.UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
+        //        amplitudes[1] = fundamentalAmplitude * ampMultiplier;
+        //    }
 
-            // Add harmonic amplitudes
-            if (double.TryParse(Harmonic2AmplitudeTextBox.Text, out double amp2))
-                amplitudes[2] = amp2;
+        //    // Add harmonic amplitudes
+        //    if (double.TryParse(Harmonic2AmplitudeTextBox.Text, out double amp2))
+        //        amplitudes[2] = amp2;
 
-            if (double.TryParse(Harmonic3AmplitudeTextBox.Text, out double amp3))
-                amplitudes[3] = amp3;
+        //    if (double.TryParse(Harmonic3AmplitudeTextBox.Text, out double amp3))
+        //        amplitudes[3] = amp3;
 
-            if (double.TryParse(Harmonic4AmplitudeTextBox.Text, out double amp4))
-                amplitudes[4] = amp4;
+        //    if (double.TryParse(Harmonic4AmplitudeTextBox.Text, out double amp4))
+        //        amplitudes[4] = amp4;
 
-            if (double.TryParse(Harmonic5AmplitudeTextBox.Text, out double amp5))
-                amplitudes[5] = amp5;
+        //    if (double.TryParse(Harmonic5AmplitudeTextBox.Text, out double amp5))
+        //        amplitudes[5] = amp5;
 
-            if (double.TryParse(Harmonic6AmplitudeTextBox.Text, out double amp6))
-                amplitudes[6] = amp6;
+        //    if (double.TryParse(Harmonic6AmplitudeTextBox.Text, out double amp6))
+        //        amplitudes[6] = amp6;
 
-            if (double.TryParse(Harmonic7AmplitudeTextBox.Text, out double amp7))
-                amplitudes[7] = amp7;
+        //    if (double.TryParse(Harmonic7AmplitudeTextBox.Text, out double amp7))
+        //        amplitudes[7] = amp7;
 
-            if (double.TryParse(Harmonic8AmplitudeTextBox.Text, out double amp8))
-                amplitudes[8] = amp8;
+        //    if (double.TryParse(Harmonic8AmplitudeTextBox.Text, out double amp8))
+        //        amplitudes[8] = amp8;
 
-            return amplitudes;
-        }
+        //    return amplitudes;
+        //}
 
         // Helper method to get harmonic phases
-        private Dictionary<int, double> GetHarmonicPhases()
-        {
-            Dictionary<int, double> phases = new Dictionary<int, double>();
+        //private Dictionary<int, double> GetHarmonicPhases()
+        //{
+        //    Dictionary<int, double> phases = new Dictionary<int, double>();
 
-            // Add fundamental phase (from main phase control)
-            if (double.TryParse(ChannelPhaseTextBox.Text, out double fundamentalPhase))
-            {
-                phases[1] = fundamentalPhase;
-            }
+        //    // Add fundamental phase (from main phase control)
+        //    if (double.TryParse(ChannelPhaseTextBox.Text, out double fundamentalPhase))
+        //    {
+        //        phases[1] = fundamentalPhase;
+        //    }
 
-            // Add harmonic phases
-            if (double.TryParse(Harmonic2PhaseTextBox.Text, out double phase2))
-                phases[2] = phase2;
+        //    // Add harmonic phases
+        //    if (double.TryParse(Harmonic2PhaseTextBox.Text, out double phase2))
+        //        phases[2] = phase2;
 
-            if (double.TryParse(Harmonic3PhaseTextBox.Text, out double phase3))
-                phases[3] = phase3;
+        //    if (double.TryParse(Harmonic3PhaseTextBox.Text, out double phase3))
+        //        phases[3] = phase3;
 
-            if (double.TryParse(Harmonic4PhaseTextBox.Text, out double phase4))
-                phases[4] = phase4;
+        //    if (double.TryParse(Harmonic4PhaseTextBox.Text, out double phase4))
+        //        phases[4] = phase4;
 
-            if (double.TryParse(Harmonic5PhaseTextBox.Text, out double phase5))
-                phases[5] = phase5;
+        //    if (double.TryParse(Harmonic5PhaseTextBox.Text, out double phase5))
+        //        phases[5] = phase5;
 
-            if (double.TryParse(Harmonic6PhaseTextBox.Text, out double phase6))
-                phases[6] = phase6;
+        //    if (double.TryParse(Harmonic6PhaseTextBox.Text, out double phase6))
+        //        phases[6] = phase6;
 
-            if (double.TryParse(Harmonic7PhaseTextBox.Text, out double phase7))
-                phases[7] = phase7;
+        //    if (double.TryParse(Harmonic7PhaseTextBox.Text, out double phase7))
+        //        phases[7] = phase7;
 
-            if (double.TryParse(Harmonic8PhaseTextBox.Text, out double phase8))
-                phases[8] = phase8;
+        //    if (double.TryParse(Harmonic8PhaseTextBox.Text, out double phase8))
+        //        phases[8] = phase8;
 
-            return phases;
-        }
+        //    return phases;
+        //}
 
         // Enhanced method to refresh harmonics settings
-        private void RefreshHarmonicSettings()
-        {
-            if (!isConnected) return;
+        //private void RefreshHarmonicSettings()
+        //{
+        //    if (!isConnected) return;
 
-            try
-            {
-                // Get harmonic state
-                bool isEnabled = false;
-                try
-                {
-                    isEnabled = rigolDG2072.GetHarmonicState(activeChannel);
-                }
-                catch (Exception)
-                {
-                    // If query fails, try to infer state from other parameters
-                    string currentWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
-                    isEnabled = currentWaveform.Contains("SIN"); // Harmonics require sine wave
-                }
+        //    try
+        //    {
+        //        // Get harmonic state
+        //        bool isEnabled = false;
+        //        try
+        //        {
+        //            isEnabled = rigolDG2072.GetHarmonicState(activeChannel);
+        //        }
+        //        catch (Exception)
+        //        {
+        //            // If query fails, try to infer state from other parameters
+        //            string currentWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
+        //            isEnabled = currentWaveform.Contains("SIN"); // Harmonics require sine wave
+        //        }
 
-                // Update toggle button
-                HarmonicsToggle.IsChecked = isEnabled;
-                HarmonicsToggle.Content = isEnabled ? "ENABLED" : "DISABLED";
+        //        // Update toggle button
+        //        HarmonicsToggle.IsChecked = isEnabled;
+        //        HarmonicsToggle.Content = isEnabled ? "ENABLED" : "DISABLED";
 
-                // Set UI elements state based on enabled state
-                SetHarmonicUIElementsState(isEnabled);
+        //        // Set UI elements state based on enabled state
+        //        SetHarmonicUIElementsState(isEnabled);
 
-                // Get current fundamental parameters
-                double fundamentalAmplitude = rigolDG2072.GetAmplitude(activeChannel);
+        //        // Get current fundamental parameters
+        //        double fundamentalAmplitude = rigolDG2072.GetAmplitude(activeChannel);
 
-                if (isEnabled)
-                {
-                    try
-                    {
-                        // Get pattern to determine which harmonics are enabled
-                        string userPattern = rigolDG2072.SendQuery($":SOUR{activeChannel}:HARM:USER?").Trim();
-                        if (userPattern.Length >= 8)
-                        {
-                            // First character is 'X' (fundamental), followed by 7 digits for harmonics 2-8
-                            Harmonic2CheckBox.IsChecked = userPattern[1] == '1';
-                            Harmonic3CheckBox.IsChecked = userPattern[2] == '1';
-                            Harmonic4CheckBox.IsChecked = userPattern[3] == '1';
-                            Harmonic5CheckBox.IsChecked = userPattern[4] == '1';
-                            Harmonic6CheckBox.IsChecked = userPattern[5] == '1';
-                            Harmonic7CheckBox.IsChecked = userPattern[6] == '1';
-                            Harmonic8CheckBox.IsChecked = userPattern[7] == '1';
-                        }
+        //        if (isEnabled)
+        //        {
+        //            try
+        //            {
+        //                // Get pattern to determine which harmonics are enabled
+        //                string userPattern = rigolDG2072.SendQuery($":SOUR{activeChannel}:HARM:USER?").Trim();
+        //                if (userPattern.Length >= 8)
+        //                {
+        //                    // First character is 'X' (fundamental), followed by 7 digits for harmonics 2-8
+        //                    Harmonic2CheckBox.IsChecked = userPattern[1] == '1';
+        //                    Harmonic3CheckBox.IsChecked = userPattern[2] == '1';
+        //                    Harmonic4CheckBox.IsChecked = userPattern[3] == '1';
+        //                    Harmonic5CheckBox.IsChecked = userPattern[4] == '1';
+        //                    Harmonic6CheckBox.IsChecked = userPattern[5] == '1';
+        //                    Harmonic7CheckBox.IsChecked = userPattern[6] == '1';
+        //                    Harmonic8CheckBox.IsChecked = userPattern[7] == '1';
+        //                }
 
-                        // Update amplitude and phase values for all harmonics
-                        bool isPercentage = AmplitudePercentageMode.IsChecked == true;
+        //                // Update amplitude and phase values for all harmonics
+        //                bool isPercentage = AmplitudePercentageMode.IsChecked == true;
 
-                        for (int i = 2; i <= 8; i++)
-                        {
-                            TextBox ampTextBox = FindName($"Harmonic{i}AmplitudeTextBox") as TextBox;
-                            TextBox phaseTextBox = FindName($"Harmonic{i}PhaseTextBox") as TextBox;
+        //                for (int i = 2; i <= 8; i++)
+        //                {
+        //                    TextBox ampTextBox = FindName($"Harmonic{i}AmplitudeTextBox") as TextBox;
+        //                    TextBox phaseTextBox = FindName($"Harmonic{i}PhaseTextBox") as TextBox;
 
-                            if (ampTextBox != null)
-                            {
-                                double amplitude = rigolDG2072.GetHarmonicAmplitude(activeChannel, i);
+        //                    if (ampTextBox != null)
+        //                    {
+        //                        double amplitude = rigolDG2072.GetHarmonicAmplitude(activeChannel, i);
 
-                                // Convert to percentage if in that mode
-                                if (isPercentage && fundamentalAmplitude > 0)
-                                {
-                                    amplitude = (amplitude / fundamentalAmplitude) * 100.0;
-                                }
+        //                        // Convert to percentage if in that mode
+        //                        if (isPercentage && fundamentalAmplitude > 0)
+        //                        {
+        //                            amplitude = (amplitude / fundamentalAmplitude) * 100.0;
+        //                        }
 
-                                // Update text box
-                                ampTextBox.Text = FormatWithMinimumDecimals(amplitude);
+        //                        // Update text box
+        //                        ampTextBox.Text = FormatWithMinimumDecimals(amplitude);
 
-                                // Store value for change detection
-                                _lastAmplitudes[i] = amplitude;
-                            }
+        //                        // Store value for change detection
+        //                        _lastAmplitudes[i] = amplitude;
+        //                    }
 
-                            if (phaseTextBox != null)
-                            {
-                                double phase = rigolDG2072.GetHarmonicPhase(activeChannel, i);
-                                phaseTextBox.Text = FormatWithMinimumDecimals(phase);
+        //                    if (phaseTextBox != null)
+        //                    {
+        //                        double phase = rigolDG2072.GetHarmonicPhase(activeChannel, i);
+        //                        phaseTextBox.Text = FormatWithMinimumDecimals(phase);
 
-                                // Store value for change detection
-                                _lastPhases[i] = phase;
-                            }
-                        }
+        //                        // Store value for change detection
+        //                        _lastPhases[i] = phase;
+        //                    }
+        //                }
 
-                        // Also store enabled state for change detection
-                        _lastEnabledHarmonics[0] = Harmonic2CheckBox.IsChecked == true;
-                        _lastEnabledHarmonics[1] = Harmonic3CheckBox.IsChecked == true;
-                        _lastEnabledHarmonics[2] = Harmonic4CheckBox.IsChecked == true;
-                        _lastEnabledHarmonics[3] = Harmonic5CheckBox.IsChecked == true;
-                        _lastEnabledHarmonics[4] = Harmonic6CheckBox.IsChecked == true;
-                        _lastEnabledHarmonics[5] = Harmonic7CheckBox.IsChecked == true;
-                        _lastEnabledHarmonics[6] = Harmonic8CheckBox.IsChecked == true;
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessage($"Warning: Error refreshing harmonic details: {ex.Message}");
-                        // Continue with partial refresh
-                    }
-                }
+        //                // Also store enabled state for change detection
+        //                _lastEnabledHarmonics[0] = Harmonic2CheckBox.IsChecked == true;
+        //                _lastEnabledHarmonics[1] = Harmonic3CheckBox.IsChecked == true;
+        //                _lastEnabledHarmonics[2] = Harmonic4CheckBox.IsChecked == true;
+        //                _lastEnabledHarmonics[3] = Harmonic5CheckBox.IsChecked == true;
+        //                _lastEnabledHarmonics[4] = Harmonic6CheckBox.IsChecked == true;
+        //                _lastEnabledHarmonics[5] = Harmonic7CheckBox.IsChecked == true;
+        //                _lastEnabledHarmonics[6] = Harmonic8CheckBox.IsChecked == true;
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                LogMessage($"Warning: Error refreshing harmonic details: {ex.Message}");
+        //                // Continue with partial refresh
+        //            }
+        //        }
 
-                LogMessage("Harmonic settings refreshed from device");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error refreshing harmonic settings: {ex.Message}`");
-            }
-        }
+        //        LogMessage("Harmonic settings refreshed from device");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error refreshing harmonic settings: {ex.Message}`");
+        //    }
+        //}
 
         #endregion
 
