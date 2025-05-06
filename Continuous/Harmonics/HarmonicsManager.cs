@@ -237,11 +237,11 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                         }
 
                         // 7d. Send :SOUR(1/2):HARM:PHAS (N), Angle (N)
-                        if (phases.TryGetValue(i, out double phase))
+                        if (phases.TryGetValue(i, out double phaseValue))
                         {
-                            _device.SendCommand($":SOUR{_activeChannel}:HARM:PHAS {i},{phase}");
+                            _device.SendCommand($":SOUR{_activeChannel}:HARM:PHAS {i},{phaseValue}");
                             Thread.Sleep(30);
-                            _lastPhases[i] = phase;
+                            _lastPhases[i] = phaseValue;
                         }
 
                         // 7e. Alter Bit position (N) to 1 in sequence 'x0000000'

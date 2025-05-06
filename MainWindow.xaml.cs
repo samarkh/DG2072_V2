@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Collections.Generic;
 using static DG2072_USB_Control.RigolDG2072;
 using DG2072_USB_Control.Continuous.Harmonics;
+using System.Threading.Channels;
 
 
 namespace DG2072_USB_Control
@@ -1065,7 +1066,9 @@ namespace DG2072_USB_Control
                     // Ensure harmonics are disabled when closing
                     if (isConnected && _harmonicsManager != null)
                     {
-                        string currentWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
+
+                        //string currentWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
+                        string deviceWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
                         if (currentWaveform.Contains("HARM"))
                         {
                             LogMessage("Disabling harmonic mode before closing...");
@@ -3588,7 +3591,85 @@ namespace DG2072_USB_Control
 
         #region Harmonics Event Handlers
         // regon for harmonics events
+        // Add these methods to MainWindow.xaml.cs
 
+        private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
+        {
+            // The event is defined in the XAML file to be handled by MainWindow
+            // Forward it to the HarmonicsUIController
+            if (_harmonicsUIController != null)
+            {
+                // Use reflection to call the method since it's private in HarmonicsUIController
+                typeof(HarmonicsUIController).GetMethod("AmplitudeModeChanged",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .Invoke(_harmonicsUIController, new object[] { sender, e });
+            }
+        }
+
+        private void HarmonicCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                // Extract the harmonic number from the Tag property
+                CheckBox checkBox = sender as CheckBox;
+                if (checkBox != null && int.TryParse(checkBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Use reflection to call the method
+                    typeof(HarmonicsUIController).GetMethod("HarmonicCheckBox_Changed",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+        private void HarmonicAmplitudeTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                // Extract the harmonic number from the Tag property
+                TextBox textBox = sender as TextBox;
+                if (textBox != null && int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Use reflection to call the method
+                    typeof(HarmonicsUIController).GetMethod("HarmonicAmplitudeTextBox_LostFocus",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+        private void HarmonicPhaseTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                // Extract the harmonic number from the Tag property
+                TextBox textBox = sender as TextBox;
+                if (textBox != null && int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Use reflection to call the method
+                    typeof(HarmonicsUIController).GetMethod("HarmonicPhaseTextBox_LostFocus",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+        
+        // These methods can call the public methods directly
+        private void RefreshHarmonicSettings()
+        {
+            _harmonicsUIController?.RefreshHarmonicSettings();
+        }
+
+        private void ResetHarmonicValues()
+        {
+            _harmonicsUIController?.ResetHarmonicValues();
+        }
+
+        private void SetHarmonicUIElementsState(bool enabled)
+        {
+            _harmonicsUIController?.SetHarmonicUIElementsState(enabled);
+        }
 
         #endregion
 
