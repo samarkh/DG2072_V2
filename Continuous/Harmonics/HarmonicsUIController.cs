@@ -135,6 +135,68 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 Log($"Error attaching event handlers: {ex.Message}");
             }
         }
+        /// <summary>
+        /// Updates harmonic amplitudes when the fundamental amplitude changes
+        /// </summary>
+        public void UpdateHarmonicsForFundamentalChange(double newFundamentalAmplitude)
+        {
+            try
+            {
+                // Only proceed if harmonics are enabled and in percentage mode
+                if (HarmonicsToggle.IsChecked != true || !_isPercentageMode)
+                    return;
+
+                // Store the new fundamental amplitude
+                _fundamentalAmplitude = newFundamentalAmplitude;
+
+                // Get current UI values (which are percentages in the UI)
+                bool[] enabledHarmonics = GetEnabledHarmonics();
+                Dictionary<int, double> amplitudes = GetHarmonicAmplitudes();
+                Dictionary<int, double> phases = GetHarmonicPhases();
+
+                // Apply all settings - this will convert percentages to absolute values
+                // using the new fundamental amplitude
+                _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, amplitudes, phases, _isPercentageMode);
+
+                Log("Harmonic amplitudes updated for new fundamental amplitude");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error updating harmonics for fundamental change: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates harmonic amplitudes when the fundamental amplitude changes
+        /// </summary>
+        public void UpdateHarmonicsForFundamentalChange(double newFundamentalAmplitude)
+        {
+            try
+            {
+                // Only proceed if harmonics are enabled and in percentage mode
+                if (_harmonicsToggle.IsChecked != true || !_isPercentageMode)
+                    return;
+
+                // Store the new fundamental amplitude
+                _fundamentalAmplitude = newFundamentalAmplitude;
+
+                // Update cached values for display
+                bool[] enabledHarmonics = GetEnabledHarmonics();
+                Dictionary<int, double> amplitudes = GetHarmonicAmplitudes();
+                Dictionary<int, double> phases = GetHarmonicPhases();
+
+                // Apply all settings - this will convert percentages to absolute values
+                // using the new fundamental amplitude
+                _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, amplitudes, phases, _isPercentageMode);
+
+                Log("Harmonic amplitudes updated for new fundamental amplitude");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error updating harmonics for fundamental change: {ex.Message}");
+            }
+        }
+
 
         /// <summary>
         /// Event handler for harmonic toggle button

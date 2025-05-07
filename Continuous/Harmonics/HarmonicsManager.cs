@@ -17,6 +17,9 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         private Dictionary<int, double> _lastAmplitudes = new Dictionary<int, double>();
         private Dictionary<int, double> _lastPhases = new Dictionary<int, double>();
         private bool[] _lastEnabledHarmonics = new bool[7];
+        // Add these fields to the HarmonicsManager class
+        private readonly Toggle _harmonicsToggle;
+        private readonly bool _isPercentageMode;
 
         // Event for logging
         public event EventHandler<string> LogEvent;
@@ -58,6 +61,41 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
             return new string(pattern);
         }
+
+        /// <summary>
+        /// Updates harmonic amplitudes when the fundamental amplitude changes
+        /// </summary>
+        public void UpdateHarmonicsForFundamentalChange(double newFundamentalAmplitude)
+        {
+            try
+            {
+                // Only proceed if harmonics are enabled and in percentage mode
+                if (_harmonicsToggle.IsChecked != true || !_isPercentageMode)
+                    return;
+
+                // Store the new fundamental amplitude
+                _fundamentalAmplitude = newFundamentalAmplitude;
+
+                // Get current UI values (which are percentages in the UI)
+                bool[] enabledHarmonics = GetEnabledHarmonics();
+                Dictionary<int, double> percentages = GetHarmonicAmplitudes();
+                Dictionary<int, double> phases = GetHarmonicPhases();
+
+                // Apply all settings - this will convert percentages to absolute values
+                // using the new fundamental amplitude
+                // Replace the problematic line with the following:
+                ApplyHarmonicSettings(enabledHarmonics, percentages, phases, _isPercentageMode);
+                _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, percentages, phases, _isPercentageMode);
+
+                Log("Harmonic amplitudes updated for new fundamental amplitude");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error updating harmonics for fundamental change: {ex.Message}");
+            }
+        }
+
+
 
         /// <summary>
         /// Updates the harmonic pattern on the device
@@ -373,6 +411,38 @@ namespace DG2072_USB_Control.Continuous.Harmonics
             }
 
             return (isEnabled, amplitudes, phases, enabledHarmonics);
+        }
+        /// <summary>
+        /// Retrieves the harmonic phases from the device or UI
+        /// </summary>
+        private Dictionary<int, double> GetHarmonicPhases()
+        {
+            Dictionary<int, double> phases = new Dictionary<int, double>();
+
+            try
+            {
+                // Assuming the device provides a method to get harmonic phases
+                for (int i = 2; i <= 8; i++)
+                {
+                    double phase = _device.GetHarmonicPhase(_activeChannel, i);
+                    phases[i] = phase;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Error retrieving harmonic phases: {ex.Message}");
+            }
+
+            return phases;
+        }
+
+        // Update the constructor to initialize these fields
+        public HarmonicsManager(RigolDG2072 device, int channel, Toggle harmonicsToggle, bool isPercentageMode)
+        {
+            _device = device;
+            _activeChannel = channel;
+            _harmonicsToggle = harmonicsToggle;
+            _isPercentageMode = isPercentageMode;
         }
     }
 }

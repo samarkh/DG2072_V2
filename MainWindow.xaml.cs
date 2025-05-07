@@ -2617,6 +2617,15 @@ namespace DG2072_USB_Control
 
             rigolDG2072.SetAmplitude(activeChannel, actualAmplitude);
             LogMessage($"Set CH{activeChannel} amplitude to {amplitude} {unit} ({actualAmplitude} Vpp)");
+
+            // If harmonics are enabled and we're on the harmonic waveform, update harmonics for the new fundamental amplitude
+            if (isConnected && _harmonicsUIController != null &&
+                ChannelWaveformComboBox.SelectedItem != null &&
+                ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "HARMONIC")
+            {
+                // Update harmonics for the new amplitude
+                _harmonicsUIController.UpdateHarmonicsForFundamentalChange(actualAmplitude);
+            }
         }
 
 
