@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Windows.Controls.Primitives; // Add this at the top of the file
 
 namespace DG2072_USB_Control.Continuous.Harmonics
 {
@@ -18,7 +19,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         private Dictionary<int, double> _lastPhases = new Dictionary<int, double>();
         private bool[] _lastEnabledHarmonics = new bool[7];
         // Add these fields to the HarmonicsManager class
-        private readonly Toggle _harmonicsToggle;
+        private readonly ToggleButton _harmonicsToggle;
         private readonly bool _isPercentageMode;
 
         // Event for logging
@@ -62,38 +63,38 @@ namespace DG2072_USB_Control.Continuous.Harmonics
             return new string(pattern);
         }
 
-        /// <summary>
-        /// Updates harmonic amplitudes when the fundamental amplitude changes
-        /// </summary>
-        public void UpdateHarmonicsForFundamentalChange(double newFundamentalAmplitude)
-        {
-            try
-            {
-                // Only proceed if harmonics are enabled and in percentage mode
-                if (_harmonicsToggle.IsChecked != true || !_isPercentageMode)
-                    return;
+        ///// <summary>
+        ///// Updates harmonic amplitudes when the fundamental amplitude changes
+        ///// </summary>
+        //public void UpdateHarmonicsForFundamentalChange(double newFundamentalAmplitude)
+        //{
+        //    try
+        //    {
+        //        // Only proceed if harmonics are enabled and in percentage mode
+        //        if (_harmonicsToggle.IsChecked != true || !_isPercentageMode)
+        //            return;
 
-                // Store the new fundamental amplitude
-                _fundamentalAmplitude = newFundamentalAmplitude;
+        //        // Store the new fundamental amplitude
+        //        _fundamentalAmplitude = newFundamentalAmplitude;
 
-                // Get current UI values (which are percentages in the UI)
-                bool[] enabledHarmonics = GetEnabledHarmonics();
-                Dictionary<int, double> percentages = GetHarmonicAmplitudes();
-                Dictionary<int, double> phases = GetHarmonicPhases();
+        //        // Get current UI values (which are percentages in the UI)
+        //        bool[] enabledHarmonics = GetEnabledHarmonics();
+        //        Dictionary<int, double> percentages = GetHarmonicAmplitudes();
+        //        Dictionary<int, double> phases = GetHarmonicPhases();
 
-                // Apply all settings - this will convert percentages to absolute values
-                // using the new fundamental amplitude
-                // Replace the problematic line with the following:
-                ApplyHarmonicSettings(enabledHarmonics, percentages, phases, _isPercentageMode);
-                _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, percentages, phases, _isPercentageMode);
+        //        // Apply all settings - this will convert percentages to absolute values
+        //        // using the new fundamental amplitude
+        //        // Replace the problematic line with the following:
+        //        ApplyHarmonicSettings(enabledHarmonics, percentages, phases, _isPercentageMode);
+        //        _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, percentages, phases, _isPercentageMode);
 
-                Log("Harmonic amplitudes updated for new fundamental amplitude");
-            }
-            catch (Exception ex)
-            {
-                Log($"Error updating harmonics for fundamental change: {ex.Message}");
-            }
-        }
+        //        Log("Harmonic amplitudes updated for new fundamental amplitude");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Log($"Error updating harmonics for fundamental change: {ex.Message}");
+        //    }
+        //}
 
 
 
@@ -437,7 +438,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         }
 
         // Update the constructor to initialize these fields
-        public HarmonicsManager(RigolDG2072 device, int channel, Toggle harmonicsToggle, bool isPercentageMode)
+        public HarmonicsManager(RigolDG2072 device, int channel, ToggleButton harmonicsToggle, bool isPercentageMode)
         {
             _device = device;
             _activeChannel = channel;
