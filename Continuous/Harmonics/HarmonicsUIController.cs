@@ -538,10 +538,10 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         private void UpdateUIFromCachedValues()
         {
             // Update checkboxes
-            for (int i = 0; i < _harmonicCheckBoxes.Count && i < _cachedEnabledHarmonics.Length; i++)
-            {
-                _harmonicCheckBoxes[i].IsChecked = _cachedEnabledHarmonics[i];
-            }
+            //for (int i = 0; i < _harmonicCheckBoxes.Count && i < _cachedEnabledHarmonics.Length; i++)
+            //{
+            //    _harmonicCheckBoxes[i].IsChecked = _cachedEnabledHarmonics[i];
+            //}
 
             // Update amplitude values
             for (int i = 0; i < _harmonicAmplitudeTextBoxes.Count; i++)
