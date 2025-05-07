@@ -307,9 +307,17 @@ namespace DG2072_USB_Control.Continuous.Harmonics
             }
         }
 
+        // Add this method to HarmonicsManager class - it's a wrapper that exposes the device's GetAmplitude
+        public double GetFundamentalAmplitude()
+        {
+            return _device.GetAmplitude(_activeChannel);
+        }
+
+
         /// <summary>
         /// Gets the current harmonic settings from the device
         /// </summary>
+        // Modify GetCurrentHarmonicSettings to be smarter about percentage vs absolute
         public (bool IsEnabled, Dictionary<int, double> Amplitudes, Dictionary<int, double> Phases, bool[] EnabledHarmonics)
             GetCurrentHarmonicSettings(bool isPercentageMode)
         {
@@ -338,13 +346,13 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                         }
                     }
 
-                    // Get amplitudes and phases
+                    // Get amplitudes and phases - always store absolute values internally
                     for (int i = 2; i <= 8; i++)
                     {
                         double amplitude = _device.GetHarmonicAmplitude(_activeChannel, i);
                         double phase = _device.GetHarmonicPhase(_activeChannel, i);
 
-                        // Convert to percentage if needed
+                        // For the return values, convert to percentage if needed
                         if (isPercentageMode && fundamentalAmplitude > 0)
                         {
                             amplitude = (amplitude / fundamentalAmplitude) * 100.0;
@@ -352,6 +360,10 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
                         amplitudes[i] = amplitude;
                         phases[i] = phase;
+
+                        // Store in the last settings dictionaries (for change detection)
+                        _lastAmplitudes[i] = _device.GetHarmonicAmplitude(_activeChannel, i); // Always store absolute
+                        _lastPhases[i] = phase;
                     }
                 }
             }

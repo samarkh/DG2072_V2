@@ -303,6 +303,9 @@ namespace DG2072_USB_Control
             return 0.0;
         }
 
+
+
+
         public void SetOffset(int channel, double offset)
         {
             ValidateChannel(channel);
