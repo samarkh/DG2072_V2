@@ -138,6 +138,28 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
 
         /// <summary>
+        /// Event handler for amplitude mode radio buttons
+        /// </summary>
+        private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
+        {
+            // Update the mode flag (previous mode is stored here)
+            bool previousMode = _isPercentageMode;
+            _isPercentageMode = _amplitudePercentageMode.IsChecked == true;
+
+            // Update the amplitude header text
+            if (_amplitudeHeader != null)
+                _amplitudeHeader.Text = _isPercentageMode ? "Amplitude (%)" : "Amplitude (V)";
+
+            // Update cached values and UI display with the mode change
+            // This needs to convert the values based on the mode change
+            UpdateUIFromCachedValues();
+
+            Log($"Harmonic amplitude mode changed to {(_isPercentageMode ? "Percentage" : "Absolute")}");
+        }
+
+
+
+        /// <summary>
         /// Updates harmonic amplitudes when the fundamental amplitude changes
         /// </summary>
         public void UpdateHarmonicsForFundamentalChange(double newFundamentalAmplitude)
@@ -151,7 +173,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 // Store the new fundamental amplitude
                 _fundamentalAmplitude = newFundamentalAmplitude;
 
-                // Update cached values for display
+                // Get current settings
                 bool[] enabledHarmonics = GetEnabledHarmonics();
                 Dictionary<int, double> amplitudes = GetHarmonicAmplitudes();
                 Dictionary<int, double> phases = GetHarmonicPhases();
@@ -222,24 +244,6 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 Log($"Error toggling harmonics: {ex.Message}");
                 MessageBox.Show($"Error toggling harmonics: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        /// <summary>
-        /// Event handler for amplitude mode radio buttons
-        /// </summary>
-        // Modify the AmplitudeModeChanged method
-        private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
-        {
-            _isPercentageMode = _amplitudePercentageMode.IsChecked == true;
-
-            // Update the amplitude header text
-            if (_amplitudeHeader != null)
-                _amplitudeHeader.Text = _isPercentageMode ? "Amplitude (%)" : "Amplitude (V)";
-
-            // Update display only, don't query the device
-            UpdateUIFromCachedValues();
-
-            Log($"Harmonic amplitude mode changed to {(_isPercentageMode ? "Percentage" : "Absolute")}");
         }
 
         /// <summary>
@@ -570,9 +574,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         // Add a new method to update UI from cached values
         private void UpdateUIFromCachedValues()
         {
-
-
-            // Update amplitude values
+            // Update amplitude values with proper conversion
             for (int i = 0; i < _harmonicAmplitudeTextBoxes.Count; i++)
             {
                 int harmonicNumber = i + 2;

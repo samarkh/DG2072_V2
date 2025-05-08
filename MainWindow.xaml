@@ -271,15 +271,15 @@
                           ToolTip="Toggle harmonics function on/off" HorizontalAlignment="Left"/>
                                         </DockPanel>
 
-                                        <!-- Amplitude Mode Selection -->
+                                        <!-- Harmonic Amplitude Mode Selection -->
                                         <DockPanel Margin="0,5">
                                             <Label Content="Amplitude Mode:" Width="120"/>
                                             <RadioButton x:Name="AmplitudePercentageMode" Content="Percentage" Margin="0,0,10,0" 
-                         IsChecked="True" GroupName="AmplitudeMode" Checked="AmplitudeModeChanged"
-                         ToolTip="Display harmonic amplitudes as percentage of fundamental amplitude"/>
+                                                         IsChecked="True" GroupName="AmplitudeMode" Checked="AmplitudeModeChanged"
+                                                         ToolTip="Display harmonic amplitudes as percentage of fundamental amplitude"/>
                                             <RadioButton x:Name="AmplitudeAbsoluteMode" Content="Absolute" GroupName="AmplitudeMode" 
-                         Checked="AmplitudeModeChanged" 
-                         ToolTip="Display harmonic amplitudes in absolute voltage (V)"/>
+                                                         Checked="AmplitudeModeChanged" 
+                                                         ToolTip="Display harmonic amplitudes in absolute voltage (V)"/>    
                                         </DockPanel>
 
                                         <!-- Headers for the harmonic parameters -->
