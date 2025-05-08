@@ -648,7 +648,6 @@ namespace DG2072_USB_Control.Continuous.Harmonics
             }
         }
 
-
         /// <summary>
         /// Format a double value with minimum decimals
         /// </summary>
