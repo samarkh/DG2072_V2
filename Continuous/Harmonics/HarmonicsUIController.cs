@@ -33,8 +33,14 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
         // Add these fields near the top of the HarmonicsUIController class
         private double _fundamentalAmplitude = 1.0;
+
         private Dictionary<int, double> _cachedAmplitudes = new Dictionary<int, double>();
         private Dictionary<int, double> _cachedPhases = new Dictionary<int, double>();
+
+        // Add these fields to the HarmonicsUIController class
+        private Dictionary<int, double> _cachedAbsoluteAmplitudes = new Dictionary<int, double>();
+        private Dictionary<int, double> _cachedPercentageAmplitudes = new Dictionary<int, double>();
+
         private bool[] _cachedEnabledHarmonics = new bool[7];
         private bool _harmonicsEnabled = false;
 
@@ -138,6 +144,26 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
 
         /// <summary>
+        /// Event handler for amplitude mode radio buttons
+        /// </summary>
+        private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
+        {
+            // Update the mode flag
+            _isPercentageMode = _amplitudePercentageMode.IsChecked == true;
+
+            // Update the amplitude header text
+            if (_amplitudeHeader != null)
+                _amplitudeHeader.Text = _isPercentageMode ? "Amplitude (%)" : "Amplitude (V)";
+
+            // Update UI based on the selected mode - no conversions needed
+            UpdateUIFromCachedValues();
+
+            Log($"Harmonic amplitude mode changed to {(_isPercentageMode ? "Percentage" : "Absolute")}");
+        }
+
+
+
+        /// <summary>
         /// Updates harmonic amplitudes when the fundamental amplitude changes
         /// </summary>
         public void UpdateHarmonicsForFundamentalChange(double newFundamentalAmplitude)
@@ -151,14 +177,25 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 // Store the new fundamental amplitude
                 _fundamentalAmplitude = newFundamentalAmplitude;
 
-                // Update cached values for display
+                // Recalculate absolute values from stored percentages
+                foreach (var kvp in _cachedPercentageAmplitudes)
+                {
+                    int harmonicNumber = kvp.Key;
+                    double percentage = kvp.Value;
+
+                    // Update absolute amplitude based on new fundamental
+                    _cachedAbsoluteAmplitudes[harmonicNumber] = (percentage / 100.0) * newFundamentalAmplitude;
+                }
+
+                // Get enabled harmonics and phases
                 bool[] enabledHarmonics = GetEnabledHarmonics();
-                Dictionary<int, double> amplitudes = GetHarmonicAmplitudes();
                 Dictionary<int, double> phases = GetHarmonicPhases();
 
-                // Apply all settings - this will convert percentages to absolute values
-                // using the new fundamental amplitude
-                _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, amplitudes, phases, _isPercentageMode);
+                // Apply the new settings (always send absolute values to device)
+                _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, _cachedAbsoluteAmplitudes, phases, false);
+
+                // Update UI display
+                UpdateUIFromCachedValues();
 
                 Log("Harmonic amplitudes updated for new fundamental amplitude");
             }
@@ -225,24 +262,6 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         }
 
         /// <summary>
-        /// Event handler for amplitude mode radio buttons
-        /// </summary>
-        // Modify the AmplitudeModeChanged method
-        private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
-        {
-            _isPercentageMode = _amplitudePercentageMode.IsChecked == true;
-
-            // Update the amplitude header text
-            if (_amplitudeHeader != null)
-                _amplitudeHeader.Text = _isPercentageMode ? "Amplitude (%)" : "Amplitude (V)";
-
-            // Update display only, don't query the device
-            UpdateUIFromCachedValues();
-
-            Log($"Harmonic amplitude mode changed to {(_isPercentageMode ? "Percentage" : "Absolute")}");
-        }
-
-        /// <summary>
         /// Event handler for harmonic checkbox changes
         /// </summary>
         private void HarmonicCheckBox_Changed(object sender, RoutedEventArgs e, int harmonicNumber)
@@ -301,14 +320,15 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         /// Event handler for harmonic amplitude textbox lost focus
         /// </summary>
         // Modify these methods to update the cache when user changes values
+        // When the user changes amplitude values:
         private void HarmonicAmplitudeTextBox_LostFocus(object sender, RoutedEventArgs e, int harmonicNumber)
         {
             TextBox textBox = sender as TextBox;
-            if (textBox == null || !double.TryParse(textBox.Text, out double amplitude))
+            if (textBox == null || !double.TryParse(textBox.Text, out double value))
                 return;
 
             // Format the value for display
-            textBox.Text = FormatWithMinimumDecimals(amplitude);
+            textBox.Text = FormatWithMinimumDecimals(value);
 
             try
             {
@@ -316,22 +336,28 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 bool isEnabled = _harmonicsToggle.IsChecked == true;
                 if (isEnabled)
                 {
-                    // Convert to absolute value if in percentage mode
-                    double actualAmplitude = amplitude;
+                    // Store both percentage and absolute values
                     if (_isPercentageMode)
                     {
-                        actualAmplitude = (amplitude / 100.0) * _fundamentalAmplitude;
+                        // User entered a percentage
+                        _cachedPercentageAmplitudes[harmonicNumber] = value;
+                        // Calculate absolute value
+                        _cachedAbsoluteAmplitudes[harmonicNumber] = (value / 100.0) * _fundamentalAmplitude;
                     }
-
-                    // Update cached value
-                    _cachedAmplitudes[harmonicNumber] = actualAmplitude;
+                    else
+                    {
+                        // User entered an absolute value
+                        _cachedAbsoluteAmplitudes[harmonicNumber] = value;
+                        // Calculate percentage
+                        _cachedPercentageAmplitudes[harmonicNumber] = (value / _fundamentalAmplitude) * 100.0;
+                    }
 
                     // Ensure the harmonic is enabled
                     int index = harmonicNumber - 2;
                     if (index < _harmonicCheckBoxes.Count && _harmonicCheckBoxes[index].IsChecked == true)
                     {
-                        // Set the amplitude on the device
-                        _harmonicsManager.SetHarmonicAmplitude(harmonicNumber, actualAmplitude, false); // Send absolute value
+                        // Always send absolute value to the device
+                        _harmonicsManager.SetHarmonicAmplitude(harmonicNumber, _cachedAbsoluteAmplitudes[harmonicNumber], false);
 
                         // Apply the change
                         ApplyFullHarmonicSettings();
@@ -343,6 +369,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 Log($"Error setting harmonic amplitude: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Event handler for harmonic phase textbox lost focus
@@ -529,6 +556,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         /// Refresh the harmonic settings in the UI
         /// </summary>
         // Modify the RefreshHarmonicSettings method
+        // Also update RefreshHarmonicSettings to populate both cache dictionaries
         public void RefreshHarmonicSettings()
         {
             try
@@ -539,13 +567,35 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
                 // Cache the retrieved values
                 _harmonicsEnabled = isEnabled;
-                _cachedAmplitudes = new Dictionary<int, double>(amplitudes);
-                _cachedPhases = new Dictionary<int, double>(phases);
+
+                // Get fundamental amplitude
+                _fundamentalAmplitude = _harmonicsManager.GetFundamentalAmplitude();
+
+                // Store both percentage and absolute values
+                _cachedAbsoluteAmplitudes.Clear();
+                _cachedPercentageAmplitudes.Clear();
+
+                foreach (var kvp in amplitudes)
+                {
+                    int harmonicNumber = kvp.Key;
+                    double value = kvp.Value;
+
+                    if (_isPercentageMode)
+                    {
+                        // Device returned percentages
+                        _cachedPercentageAmplitudes[harmonicNumber] = value;
+                        _cachedAbsoluteAmplitudes[harmonicNumber] = (value / 100.0) * _fundamentalAmplitude;
+                    }
+                    else
+                    {
+                        // Device returned absolute values
+                        _cachedAbsoluteAmplitudes[harmonicNumber] = value;
+                        _cachedPercentageAmplitudes[harmonicNumber] = (value / _fundamentalAmplitude) * 100.0;
+                    }
+                }
+
                 Array.Copy(enabledHarmonics, _cachedEnabledHarmonics,
                     Math.Min(enabledHarmonics.Length, _cachedEnabledHarmonics.Length));
-
-                // Get fundamental amplitude for percentage calculations
-                _fundamentalAmplitude = _harmonicsManager.GetFundamentalAmplitude();
 
                 // Update UI controls
                 _harmonicsToggle.IsChecked = isEnabled;
@@ -568,31 +618,25 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         }
 
         // Add a new method to update UI from cached values
+        // Update the display method to use the correct cached values based on mode
         private void UpdateUIFromCachedValues()
         {
-
-
             // Update amplitude values
             for (int i = 0; i < _harmonicAmplitudeTextBoxes.Count; i++)
             {
                 int harmonicNumber = i + 2;
 
-                if (_cachedAmplitudes.TryGetValue(harmonicNumber, out double amplitude))
+                // Use the appropriate cached values based on mode
+                Dictionary<int, double> valueSource = _isPercentageMode ?
+                    _cachedPercentageAmplitudes : _cachedAbsoluteAmplitudes;
+
+                if (valueSource.TryGetValue(harmonicNumber, out double displayValue))
                 {
-                    // Convert to current display mode if needed
-                    double displayValue = amplitude;
-
-                    if (_isPercentageMode)
-                    {
-                        // Display as percentage of fundamental
-                        displayValue = (amplitude / _fundamentalAmplitude) * 100.0;
-                    }
-
                     _harmonicAmplitudeTextBoxes[i].Text = FormatWithMinimumDecimals(displayValue);
                 }
             }
 
-            // Update phase values
+            // Update phase values (unchanged)
             for (int i = 0; i < _harmonicPhaseTextBoxes.Count; i++)
             {
                 int harmonicNumber = i + 2;
