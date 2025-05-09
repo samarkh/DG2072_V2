@@ -7,6 +7,11 @@
         mc:Ignorable="d"
         Title="Rigol DG2072 USB Control" Height="1050" Width="650"
         Loaded="Window_Loaded" Closing="Window_Closing">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </Window.Resources>
+
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -295,25 +300,37 @@
                                             <TextBlock x:Name="AmplitudeHeader" Text="Amplitude (%)" Grid.Column="2" FontWeight="Bold" HorizontalAlignment="Center"/>
                                             <TextBlock Text="Phase (°)" Grid.Column="3" FontWeight="Bold" HorizontalAlignment="Center"/>
                                         </Grid>
+                                        <!-- Individual Harmonics Start -->
+                                        <!-- Individual Harmonics Start -->
+                                        <!-- Individual Harmonics Start -->
 
                                         <!-- Harmonic 2 -->
                                         <Grid Margin="0,5">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="60"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Label Content="2nd Harmonic" Grid.Column="0"/>
                                             <CheckBox x:Name="Harmonic2CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                    Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="2"
-                    ToolTip="Enable/disable 2nd harmonic"/>
+              Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="2"
+              ToolTip="Enable/disable 2nd harmonic"/>
                                             <TextBox x:Name="Harmonic2AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="2"
-                    ToolTip="Set amplitude for 2nd harmonic"/>
-                                            <TextBox x:Name="Harmonic2PhaseTextBox" Grid.Column="3" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="2"
-                    ToolTip="Set phase for 2nd harmonic (0-360°)"/>
+             LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="2"
+             ToolTip="Set amplitude for 2nd harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic2AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+              SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+              Tag="2" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic2PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+             LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="2"
+             ToolTip="Set phase for 2nd harmonic (0-360°)"/>
                                         </Grid>
 
                                         <!-- Harmonic 3 -->
@@ -321,19 +338,28 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="60"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Label Content="3rd Harmonic" Grid.Column="0"/>
                                             <CheckBox x:Name="Harmonic3CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                    Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="3"
-                    ToolTip="Enable/disable 3rd harmonic"/>
+              Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="3"
+              ToolTip="Enable/disable 3rd harmonic"/>
                                             <TextBox x:Name="Harmonic3AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="3"
-                    ToolTip="Set amplitude for 3rd harmonic"/>
-                                            <TextBox x:Name="Harmonic3PhaseTextBox" Grid.Column="3" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="3"
-                    ToolTip="Set phase for 3rd harmonic (0-360°)"/>
+             LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="3"
+             ToolTip="Set amplitude for 3rd harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic3AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+              SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+              Tag="3" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic3PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+             LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="3"
+             ToolTip="Set phase for 3rd harmonic (0-360°)"/>
                                         </Grid>
 
                                         <!-- Harmonic 4 -->
@@ -341,39 +367,58 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="60"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Label Content="4th Harmonic" Grid.Column="0"/>
                                             <CheckBox x:Name="Harmonic4CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                    Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="4"
-                    ToolTip="Enable/disable 4th harmonic"/>
+              Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="4"
+              ToolTip="Enable/disable 4th harmonic"/>
                                             <TextBox x:Name="Harmonic4AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="4"
-                    ToolTip="Set amplitude for 4th harmonic"/>
-                                            <TextBox x:Name="Harmonic4PhaseTextBox" Grid.Column="3" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="4"
-                    ToolTip="Set phase for 4th harmonic (0-360°)"/>
+             LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="4"
+             ToolTip="Set amplitude for 4th harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic4AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+              SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+              Tag="4" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic4PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+             LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="4"
+             ToolTip="Set phase for 4th harmonic (0-360°)"/>
                                         </Grid>
 
+                                        <!-- Repeat the same pattern for harmonics 5-8 -->
                                         <!-- Harmonic 5 -->
                                         <Grid Margin="0,5">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="60"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Label Content="5th Harmonic" Grid.Column="0"/>
                                             <CheckBox x:Name="Harmonic5CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                    Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="5"
-                    ToolTip="Enable/disable 5th harmonic"/>
+              Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="5"
+              ToolTip="Enable/disable 5th harmonic"/>
                                             <TextBox x:Name="Harmonic5AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="5"
-                    ToolTip="Set amplitude for 5th harmonic"/>
-                                            <TextBox x:Name="Harmonic5PhaseTextBox" Grid.Column="3" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="5"
-                    ToolTip="Set phase for 5th harmonic (0-360°)"/>
+             LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="5"
+             ToolTip="Set amplitude for 5th harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic5AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+              SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+              Tag="5" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic5PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+             LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="5"
+             ToolTip="Set phase for 5th harmonic (0-360°)"/>
                                         </Grid>
 
                                         <!-- Harmonic 6 -->
@@ -381,19 +426,28 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="60"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Label Content="6th Harmonic" Grid.Column="0"/>
                                             <CheckBox x:Name="Harmonic6CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                    Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="6"
-                    ToolTip="Enable/disable 6th harmonic"/>
+              Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="6"
+              ToolTip="Enable/disable 6th harmonic"/>
                                             <TextBox x:Name="Harmonic6AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="6"
-                    ToolTip="Set amplitude for 6th harmonic"/>
-                                            <TextBox x:Name="Harmonic6PhaseTextBox" Grid.Column="3" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="6"
-                    ToolTip="Set phase for 6th harmonic (0-360°)"/>
+             LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="6"
+             ToolTip="Set amplitude for 6th harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic6AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+              SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+              Tag="6" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic6PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+             LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="6"
+             ToolTip="Set phase for 6th harmonic (0-360°)"/>
                                         </Grid>
 
                                         <!-- Harmonic 7 -->
@@ -401,39 +455,58 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="60"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Label Content="7th Harmonic" Grid.Column="0"/>
                                             <CheckBox x:Name="Harmonic7CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                    Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="7"
-                    ToolTip="Enable/disable 7th harmonic"/>
+              Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="7"
+              ToolTip="Enable/disable 7th harmonic"/>
                                             <TextBox x:Name="Harmonic7AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="7"
-                    ToolTip="Set amplitude for 7th harmonic"/>
-                                            <TextBox x:Name="Harmonic7PhaseTextBox" Grid.Column="3" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="7"
-                    ToolTip="Set phase for 7th harmonic (0-360°)"/>
+             LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="7"
+             ToolTip="Set amplitude for 7th harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic7AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+              SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+              Tag="7" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic7PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+             LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="7"
+             ToolTip="Set phase for 7th harmonic (0-360°)"/>
                                         </Grid>
+
 
                                         <!-- Harmonic 8 -->
                                         <Grid Margin="0,5">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="120"/>
                                                 <ColumnDefinition Width="60"/>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Label Content="8th Harmonic" Grid.Column="0"/>
                                             <CheckBox x:Name="Harmonic8CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
-                    Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="8"
-                    ToolTip="Enable/disable 8th harmonic"/>
+              Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="8"
+              ToolTip="Enable/disable 8th harmonic"/>
                                             <TextBox x:Name="Harmonic8AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="8"
-                    ToolTip="Set amplitude for 8th harmonic"/>
-                                            <TextBox x:Name="Harmonic8PhaseTextBox" Grid.Column="3" Text="0.0" Margin="5,0" 
-                    LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="8"
-                    ToolTip="Set phase for 8th harmonic (0-360°)"/>
+             LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="8"
+             ToolTip="Set amplitude for 8th harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic8AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+              SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+              Tag="8" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic8PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+             LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="8"
+             ToolTip="Set phase for 8th harmonic (0-360°)"/>
                                         </Grid>
 
 

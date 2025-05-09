@@ -1,8 +1,26 @@
-﻿using System;
+﻿using DG2072_USB_Control.Continuous.Harmonics;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+
+private readonly HarmonicsManager _harmonicsManager;
+private readonly Window _mainWindow;
+private ToggleButton _harmonicsToggle;
+private RadioButton _amplitudePercentageMode;
+
+private RadioButton _amplitudeAbsoluteMode;
+private TextBlock _amplitudeHeader;
+private readonly List<CheckBox> _harmonicCheckBoxes = new List<CheckBox>();
+private readonly List<TextBox> _harmonicAmplitudeTextBoxes = new List<TextBox>();
+private readonly List<TextBox> _harmonicPhaseTextBoxes = new List<TextBox>();
+private bool _isPercentageMode = true;
+
+// Add to class fields
+private readonly List<ComboBox> _harmonicAmplitudeUnitComboBoxes = new List<ComboBox>();
+private Dictionary<int, string> _lastUnitSelections = new Dictionary<int, string>();
+
 
 namespace DG2072_USB_Control.Continuous.Harmonics
 {
@@ -24,6 +42,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         private readonly List<CheckBox> _harmonicCheckBoxes = new List<CheckBox>();
         private readonly List<TextBox> _harmonicAmplitudeTextBoxes = new List<TextBox>();
         private readonly List<TextBox> _harmonicPhaseTextBoxes = new List<TextBox>();
+        private readonly List<ComboBox> _harmonicAmplitudeUnitComboBoxes = new List<ComboBox>();
 
         // Flag for amplitude mode
         private bool _isPercentageMode = true;
@@ -40,6 +59,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         // Add these fields to the HarmonicsUIController class
         private Dictionary<int, double> _cachedAbsoluteAmplitudes = new Dictionary<int, double>();
         private Dictionary<int, double> _cachedPercentageAmplitudes = new Dictionary<int, double>();
+        private Dictionary<int, string> _lastUnitSelections = new Dictionary<int, string>();
 
         private bool[] _cachedEnabledHarmonics = new bool[7];
         private bool _harmonicsEnabled = false;
@@ -87,6 +107,11 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
                     if (ampTextBox != null)
                         _harmonicAmplitudeTextBoxes.Add(ampTextBox);
+
+                    // Add reference to amplitude unit combo boxes
+                    ComboBox ampUnitComboBox = _mainWindow.FindName($"Harmonic{i}AmplitudeUnitComboBox") as ComboBox;
+                    if (ampUnitComboBox != null)
+                        _harmonicAmplitudeUnitComboBoxes.Add(ampUnitComboBox);
 
                     if (phaseTextBox != null)
                         _harmonicPhaseTextBoxes.Add(phaseTextBox);
@@ -143,6 +168,61 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         }
 
 
+        // Combo Box event handler for unit selection 
+        // Add new method to handle unit combo box selection changes
+        private void HarmonicAmplitudeUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e, int harmonicNumber)
+        {
+            ComboBox comboBox = sender as ComboBox;
+            if (comboBox == null) return;
+
+            int index = harmonicNumber - 2;
+            if (index < 0 || index >= _harmonicAmplitudeTextBoxes.Count)
+                return;
+
+            TextBox textBox = _harmonicAmplitudeTextBoxes[index];
+            if (textBox == null || !double.TryParse(textBox.Text, out double value))
+                return;
+
+            // Get selected unit
+            ComboBoxItem selectedItem = comboBox.SelectedItem as ComboBoxItem;
+            if (selectedItem == null) return;
+
+            string unit = selectedItem.Content.ToString();
+
+            // Store last selection
+            _lastUnitSelections[harmonicNumber] = unit;
+
+            // Convert value to selected unit (based on previously stored absolute value)
+            double absoluteValueInVolts = _cachedAbsoluteAmplitudes.TryGetValue(harmonicNumber, out double absValue) ? absValue : 0.0;
+            double displayValue = ConvertFromVolts(absoluteValueInVolts, unit);
+
+            // Update text box with formatted value
+            textBox.Text = FormatWithMinimumDecimals(displayValue);
+        }
+
+        // Helper methods for unit conversion
+        private double ConvertFromVolts(double volts, string toUnit)
+        {
+            switch (toUnit)
+            {
+                case "mV": return volts * 1000.0;
+                case "µV": return volts * 1000000.0;
+                default: return volts; // V
+            }
+        }
+
+        private double ConvertToVolts(double value, string fromUnit)
+        {
+            switch (fromUnit)
+            {
+                case "mV": return value / 1000.0;
+                case "µV": return value / 1000000.0;
+                default: return value; // V
+            }
+        }
+        // end of new method
+
+
         /// <summary>
         /// Event handler for amplitude mode radio buttons
         /// </summary>
@@ -153,9 +233,9 @@ namespace DG2072_USB_Control.Continuous.Harmonics
 
             // Update the amplitude header text
             if (_amplitudeHeader != null)
-                _amplitudeHeader.Text = _isPercentageMode ? "Amplitude (%)" : "Amplitude (V)";
+                _amplitudeHeader.Text = _isPercentageMode ? "Amplitude (%)" : "Amplitude";
 
-            // Update UI based on the selected mode - no conversions needed
+            // Update UI based on the selected mode
             UpdateUIFromCachedValues();
 
             Log($"Harmonic amplitude mode changed to {(_isPercentageMode ? "Percentage" : "Absolute")}");
@@ -321,13 +401,14 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         /// </summary>
         // Modify these methods to update the cache when user changes values
         // When the user changes amplitude values:
+        // Modify HarmonicAmplitudeTextBox_LostFocus to handle unit conversions
         private void HarmonicAmplitudeTextBox_LostFocus(object sender, RoutedEventArgs e, int harmonicNumber)
         {
             TextBox textBox = sender as TextBox;
             if (textBox == null || !double.TryParse(textBox.Text, out double value))
                 return;
 
-            // Format the value for display
+            // Format value with minimum decimal places
             textBox.Text = FormatWithMinimumDecimals(value);
 
             try
@@ -336,30 +417,42 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 bool isEnabled = _harmonicsToggle.IsChecked == true;
                 if (isEnabled)
                 {
-                    // Store both percentage and absolute values
+                    // Store values based on mode
                     if (_isPercentageMode)
                     {
-                        // User entered a percentage
                         _cachedPercentageAmplitudes[harmonicNumber] = value;
-                        // Calculate absolute value
                         _cachedAbsoluteAmplitudes[harmonicNumber] = (value / 100.0) * _fundamentalAmplitude;
                     }
                     else
                     {
-                        // User entered an absolute value
-                        _cachedAbsoluteAmplitudes[harmonicNumber] = value;
-                        // Calculate percentage
-                        _cachedPercentageAmplitudes[harmonicNumber] = (value / _fundamentalAmplitude) * 100.0;
+                        // Get the current unit
+                        string unit = "V";
+                        int index = harmonicNumber - 2;
+                        if (index >= 0 && index < _harmonicAmplitudeUnitComboBoxes.Count)
+                        {
+                            ComboBox unitComboBox = _harmonicAmplitudeUnitComboBoxes[index];
+                            if (unitComboBox != null && unitComboBox.SelectedItem != null)
+                            {
+                                unit = ((ComboBoxItem)unitComboBox.SelectedItem).Content.ToString();
+                            }
+                        }
+
+                        // Convert to volts and store
+                        double volts = ConvertToVolts(value, unit);
+                        _cachedAbsoluteAmplitudes[harmonicNumber] = volts;
+
+                        // Calculate percentage based on fundamental
+                        _cachedPercentageAmplitudes[harmonicNumber] = (volts / _fundamentalAmplitude) * 100.0;
                     }
 
-                    // Ensure the harmonic is enabled
+                    // Only send to device if the harmonic is enabled
                     int index = harmonicNumber - 2;
                     if (index < _harmonicCheckBoxes.Count && _harmonicCheckBoxes[index].IsChecked == true)
                     {
                         // Always send absolute value to the device
                         _harmonicsManager.SetHarmonicAmplitude(harmonicNumber, _cachedAbsoluteAmplitudes[harmonicNumber], false);
 
-                        // Apply the change
+                        // Apply the full settings to ensure consistency
                         ApplyFullHarmonicSettings();
                     }
                 }
@@ -626,13 +719,62 @@ namespace DG2072_USB_Control.Continuous.Harmonics
             {
                 int harmonicNumber = i + 2;
 
-                // Use the appropriate cached values based on mode
-                Dictionary<int, double> valueSource = _isPercentageMode ?
-                    _cachedPercentageAmplitudes : _cachedAbsoluteAmplitudes;
-
-                if (valueSource.TryGetValue(harmonicNumber, out double displayValue))
+                if (_isPercentageMode)
                 {
-                    _harmonicAmplitudeTextBoxes[i].Text = FormatWithMinimumDecimals(displayValue);
+                    // Percentage mode handling (unchanged)
+                    if (_cachedPercentageAmplitudes.TryGetValue(harmonicNumber, out double percentage))
+                    {
+                        _harmonicAmplitudeTextBoxes[i].Text = FormatWithMinimumDecimals(percentage);
+                    }
+                }
+                else // Absolute mode
+                {
+                    if (_cachedAbsoluteAmplitudes.TryGetValue(harmonicNumber, out double volts))
+                    {
+                        // Handle auto-ranging based on value
+                        string unit = "V";
+                        double displayValue = volts;
+
+                        if (Math.Abs(volts) < 0.1 && Math.Abs(volts) >= 0.0001)
+                        {
+                            unit = "mV";
+                            displayValue = volts * 1000.0;
+                        }
+                        else if (Math.Abs(volts) < 0.0001 && Math.Abs(volts) >= 0.0000001)
+                        {
+                            unit = "µV";
+                            displayValue = volts * 1000000.0;
+                        }
+                        else if (Math.Abs(volts) < 0.0000001)
+                        {
+                            // Special handling for very small values
+                            unit = "V";
+                            displayValue = 0.0;
+                        }
+
+                        // Update text box with formatted value
+                        _harmonicAmplitudeTextBoxes[i].Text = FormatWithMinimumDecimals(displayValue);
+
+                        // Update unit combo box selection
+                        if (i < _harmonicAmplitudeUnitComboBoxes.Count)
+                        {
+                            ComboBox unitComboBox = _harmonicAmplitudeUnitComboBoxes[i];
+                            if (unitComboBox != null)
+                            {
+                                foreach (ComboBoxItem item in unitComboBox.Items)
+                                {
+                                    if (item.Content.ToString() == unit)
+                                    {
+                                        unitComboBox.SelectedItem = item;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Store the selected unit
+                        _lastUnitSelections[harmonicNumber] = unit;
+                    }
                 }
             }
 

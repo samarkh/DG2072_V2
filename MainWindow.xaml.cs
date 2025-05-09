@@ -3615,6 +3615,22 @@ namespace DG2072_USB_Control
             }
         }
 
+        private void HarmonicAmplitudeUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                ComboBox comboBox = sender as ComboBox;
+                if (comboBox != null && int.TryParse(comboBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Forward the event to the harmonics controller
+                    _harmonicsUIController.GetType().GetMethod("HarmonicAmplitudeUnitComboBox_SelectionChanged",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        ?.Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+
         private void HarmonicCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             if (_harmonicsUIController != null)
