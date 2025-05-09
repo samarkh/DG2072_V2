@@ -5,21 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 
-private readonly HarmonicsManager _harmonicsManager;
-private readonly Window _mainWindow;
-private ToggleButton _harmonicsToggle;
-private RadioButton _amplitudePercentageMode;
-
-private RadioButton _amplitudeAbsoluteMode;
-private TextBlock _amplitudeHeader;
-private readonly List<CheckBox> _harmonicCheckBoxes = new List<CheckBox>();
-private readonly List<TextBox> _harmonicAmplitudeTextBoxes = new List<TextBox>();
-private readonly List<TextBox> _harmonicPhaseTextBoxes = new List<TextBox>();
-private bool _isPercentageMode = true;
-
-// Add to class fields
-private readonly List<ComboBox> _harmonicAmplitudeUnitComboBoxes = new List<ComboBox>();
-private Dictionary<int, string> _lastUnitSelections = new Dictionary<int, string>();
 
 
 namespace DG2072_USB_Control.Continuous.Harmonics
@@ -31,6 +16,7 @@ namespace DG2072_USB_Control.Continuous.Harmonics
     {
         private readonly HarmonicsManager _harmonicsManager;
         private readonly Window _mainWindow;
+
 
         // UI Controls
         private ToggleButton _harmonicsToggle;
@@ -446,8 +432,9 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                     }
 
                     // Only send to device if the harmonic is enabled
-                    int index = harmonicNumber - 2;
-                    if (index < _harmonicCheckBoxes.Count && _harmonicCheckBoxes[index].IsChecked == true)
+                    // CHANGE HERE: Renamed to harmonicIndex to avoid the conflict
+                    int harmonicIndex = harmonicNumber - 2;
+                    if (harmonicIndex < _harmonicCheckBoxes.Count && _harmonicCheckBoxes[harmonicIndex].IsChecked == true)
                     {
                         // Always send absolute value to the device
                         _harmonicsManager.SetHarmonicAmplitude(harmonicNumber, _cachedAbsoluteAmplitudes[harmonicNumber], false);
@@ -462,6 +449,8 @@ namespace DG2072_USB_Control.Continuous.Harmonics
                 Log($"Error setting harmonic amplitude: {ex.Message}");
             }
         }
+
+
 
 
         /// <summary>
