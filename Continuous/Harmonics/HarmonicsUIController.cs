@@ -236,29 +236,46 @@ namespace DG2072_USB_Control.Continuous.Harmonics
         {
             try
             {
-                // Only proceed if harmonics are enabled and in percentage mode
-                if (_harmonicsToggle.IsChecked != true || !_isPercentageMode)
+                // Only proceed if harmonics are enabled
+                if (_harmonicsToggle.IsChecked != true)
                     return;
 
                 // Store the new fundamental amplitude
                 _fundamentalAmplitude = newFundamentalAmplitude;
 
-                // Recalculate absolute values from stored percentages
-                foreach (var kvp in _cachedPercentageAmplitudes)
+                if (_isPercentageMode)
                 {
-                    int harmonicNumber = kvp.Key;
-                    double percentage = kvp.Value;
+                    // EXISTING CODE: In percentage mode, recalculate absolute values from stored percentages
+                    foreach (var kvp in _cachedPercentageAmplitudes)
+                    {
+                        int harmonicNumber = kvp.Key;
+                        double percentage = kvp.Value;
 
-                    // Update absolute amplitude based on new fundamental
-                    _cachedAbsoluteAmplitudes[harmonicNumber] = (percentage / 100.0) * newFundamentalAmplitude;
+                        // Update absolute amplitude based on new fundamental
+                        _cachedAbsoluteAmplitudes[harmonicNumber] = (percentage / 100.0) * newFundamentalAmplitude;
+                    }
+
+                    // Get enabled harmonics and phases
+                    bool[] enabledHarmonics = GetEnabledHarmonics();
+                    Dictionary<int, double> phases = GetHarmonicPhases();
+
+                    // Apply the new settings (always send absolute values to device)
+                    _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, _cachedAbsoluteAmplitudes, phases, false);
                 }
+                else
+                {
+                    // NEW CODE: In absolute mode, keep absolute values the same, but recalculate percentages
+                    foreach (var kvp in _cachedAbsoluteAmplitudes)
+                    {
+                        int harmonicNumber = kvp.Key;
+                        double absolute = kvp.Value;
 
-                // Get enabled harmonics and phases
-                bool[] enabledHarmonics = GetEnabledHarmonics();
-                Dictionary<int, double> phases = GetHarmonicPhases();
+                        // Recalculate percentage based on new fundamental amplitude
+                        _cachedPercentageAmplitudes[harmonicNumber] = (absolute / newFundamentalAmplitude) * 100.0;
+                    }
 
-                // Apply the new settings (always send absolute values to device)
-                _harmonicsManager.ApplyHarmonicSettings(enabledHarmonics, _cachedAbsoluteAmplitudes, phases, false);
+                    // No need to apply to device since absolute values haven't changed
+                }
 
                 // Update UI display
                 UpdateUIFromCachedValues();
