@@ -52,8 +52,6 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
         // Event for logging
         public event EventHandler<string> LogEvent;
 
-
-
         // Implement interface methods
         public void OnPulsePeriodTextChanged(object sender, TextChangedEventArgs e)
         {
@@ -112,8 +110,6 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
             _pulseFallTimeUnitComboBox = mainWindow.FindName("PulseFallTimeUnitComboBox") as ComboBox;
             _pulseRateModeToggle = mainWindow.FindName("PulseRateModeToggle") as ToggleButton;
 
-            
-
             // Find dock panels
             _pulseWidthDockPanel = FindVisualParent<DockPanel>(_pulseWidthTextBox);
             _pulsePeriodDockPanel = FindVisualParent<DockPanel>(_pulsePeriodTextBox);
@@ -124,9 +120,6 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
             // Find frequency controls for calculated values
             _frequencyTextBox = mainWindow.FindName("ChannelFrequencyTextBox") as TextBox;
             _frequencyUnitComboBox = mainWindow.FindName("ChannelFrequencyUnitComboBox") as ComboBox;
-
-            // Attach event handlers
-            //AttachEventHandlers();    // We don't need to attach event handlers here anymore since MainWindow now delegates to us
 
         }
 
@@ -145,55 +138,6 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
                 return parent;
             else
                 return FindVisualParent<T>(parentObject);
-        }
-
-        /// <summary>
-        /// Attach event handlers to UI elements
-        /// </summary>
-        private void AttachEventHandlers()
-        {
-            // Attach TextChanged event handlers
-            if (_pulseWidthTextBox != null)
-                _pulseWidthTextBox.TextChanged += PulseWidthTextBox_TextChanged;
-
-            if (_pulsePeriodTextBox != null)
-                _pulsePeriodTextBox.TextChanged += PulsePeriodTextBox_TextChanged;
-
-            if (_pulseRiseTimeTextBox != null)
-                _pulseRiseTimeTextBox.TextChanged += PulseRiseTimeTextBox_TextChanged;
-
-            if (_pulseFallTimeTextBox != null)
-                _pulseFallTimeTextBox.TextChanged += PulseFallTimeTextBox_TextChanged;
-
-            // Attach LostFocus event handlers
-            if (_pulseWidthTextBox != null)
-                _pulseWidthTextBox.LostFocus += PulseWidthTextBox_LostFocus;
-
-            if (_pulsePeriodTextBox != null)
-                _pulsePeriodTextBox.LostFocus += PulsePeriodTextBox_LostFocus;
-
-            if (_pulseRiseTimeTextBox != null)
-                _pulseRiseTimeTextBox.LostFocus += PulseRiseTimeTextBox_LostFocus;
-
-            if (_pulseFallTimeTextBox != null)
-                _pulseFallTimeTextBox.LostFocus += PulseFallTimeTextBox_LostFocus;
-
-            // Attach SelectionChanged event handlers for ComboBoxes
-            if (_pulseWidthUnitComboBox != null)
-                _pulseWidthUnitComboBox.SelectionChanged += PulseWidthUnitComboBox_SelectionChanged;
-
-            if (_pulsePeriodUnitComboBox != null)
-                _pulsePeriodUnitComboBox.SelectionChanged += PulsePeriodUnitComboBox_SelectionChanged;
-
-            if (_pulseRiseTimeUnitComboBox != null)
-                _pulseRiseTimeUnitComboBox.SelectionChanged += PulseRiseTimeUnitComboBox_SelectionChanged;
-
-            if (_pulseFallTimeUnitComboBox != null)
-                _pulseFallTimeUnitComboBox.SelectionChanged += PulseFallTimeUnitComboBox_SelectionChanged;
-
-            // Attach mode toggle handler
-            if (_pulseRateModeToggle != null)
-                _pulseRateModeToggle.Click += PulseRateModeToggle_Click;
         }
 
         /// <summary>
@@ -1057,45 +1001,9 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
 
         #endregion
 
-
         #region Period Methods
 
-        // Add these implementations to the PulseGen class
 
-        // Period methods
-        //public void OnPulsePeriodTextChanged(object sender, TextChangedEventArgs e)
-        //{
-        //    TextBox textBox = sender as TextBox;
-        //    if (textBox == null || !double.TryParse(textBox.Text, out double period))
-        //        return;
-
-        //    // In period mode, update the device directly
-        //    if (!_frequencyModeActive)
-        //    {
-        //        InitializeOrResetTimer(ref _pulsePeriodUpdateTimer, () => {
-        //            if (double.TryParse(textBox.Text, out double p))
-        //            {
-        //                ApplyPulsePeriod(p);
-        //                // Update calculated frequency
-        //                UpdateCalculatedRateValue();
-        //            }
-        //        });
-        //    }
-        //    // In frequency mode, just update the calculated value
-        //    else if (_frequencyModeActive)
-        //    {
-        //        UpdateCalculatedRateValue();
-        //    }
-        //}
-
-        //public void OnPulsePeriodLostFocus(object sender, RoutedEventArgs e)
-        //{
-        //    TextBox textBox = sender as TextBox;
-        //    if (textBox != null && double.TryParse(textBox.Text, out double _))
-        //    {
-        //        AdjustPulseTimeAndUnit(textBox, _pulsePeriodUnitComboBox);
-        //    }
-        //}
 
         public void OnPulsePeriodUnitChanged(object sender, SelectionChangedEventArgs e)
         {
