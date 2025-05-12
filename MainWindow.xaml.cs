@@ -48,18 +48,11 @@ namespace DG2072_USB_Control
         private DispatcherTimer _dutyCycleUpdateTimer;
         private DockPanel DutyCycleDockPanel;
 
-        //private DispatcherTimer _pulseWidthUpdateTimer;
-        //private DispatcherTimer _pulsePeriodUpdateTimer;
-        //private DispatcherTimer _pulseRiseTimeUpdateTimer;
-        //private DispatcherTimer _pulseFallTimeUpdateTimer;
         // Add this with the other timer declarations in MainWindow.xaml.cs:
         private DispatcherTimer _secondaryFrequencyUpdateTimer;
-
-        // Add these fields to the MainWindow class
         private bool _frequencyModeActive = true; // Default to frequency mode
         private DockPanel PulsePeriodDockPanel;
         private DockPanel PhaseDockPanel;
-        // Add this field to the MainWindow class
         private ChannelHarmonicController harmonicController;
 
         private double frequencyRatio = 2.0; // Default frequency ratio (harmonic)
@@ -1186,9 +1179,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
-
-        // Add this event handler
         private void ChannelOffsetUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -1199,7 +1189,6 @@ namespace DG2072_USB_Control
             }
         }
 
-        // Add this method for applying offset with unit conversion
         private void ApplyOffset(double offset)
         {
             if (!isConnected) return;
@@ -1219,7 +1208,6 @@ namespace DG2072_USB_Control
             }
         }
 
-        // Add this helper method
         private void AdjustOffsetAndUnit(TextBox textBox, ComboBox unitComboBox)
         {
             if (!double.TryParse(textBox.Text, out double value))
@@ -1261,8 +1249,6 @@ namespace DG2072_USB_Control
             textBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(value, 1); // 1 decimal for frequency
         }
 
-
-
         private void ChannelWaveformComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -1277,7 +1263,6 @@ namespace DG2072_USB_Control
 
                 try
                 {
-                    // First, set the waveform on the device - CRITICAL!
                     // We need to use SINE as the base waveform for harmonics
                     rigolDG2072.SendCommand($":SOURCE{activeChannel}:APPLY:SIN 1000,5,0,0");
                     System.Threading.Thread.Sleep(100);  // Give device time to process
@@ -1374,7 +1359,7 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            // Special handling for USER (arbitrary) waveform
+
             else if (waveform == "USER")
             {
                 LogMessage("Switching to arbitrary waveform mode...");
@@ -1411,11 +1396,7 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            // In the ChannelWaveformComboBox_SelectionChanged method, add special handling for NOISE
-            // Update the existing "else" block that handles standard waveforms
 
-
-            // Add this to the ChannelWaveformComboBox_SelectionChanged method right after the "USER" case
             else if (waveform == "DC")
             {
                 LogMessage("Switching to DC waveform mode...");
@@ -1487,10 +1468,6 @@ namespace DG2072_USB_Control
                 }
             }
 
-
-
-
-
             else
             {
                 // For all other waveforms, use the standard APPLY command to ensure it's set properly
@@ -1539,53 +1516,6 @@ namespace DG2072_USB_Control
             UpdateWaveformSpecificControls(waveform);
         }
 
-        private void PulsePeriodTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (!double.TryParse(PulsePeriod.Text, out double period)) return;
-
-            // In period mode, update the device directly
-            if (!_frequencyModeActive)
-            {
-                if (_pulsePeriodUpdateTimer == null)
-                {
-                    _pulsePeriodUpdateTimer = new DispatcherTimer
-                    {
-                        Interval = TimeSpan.FromMilliseconds(500)
-                    };
-                    _pulsePeriodUpdateTimer.Tick += (s, args) =>
-                    {
-                        _pulsePeriodUpdateTimer.Stop();
-                        if (double.TryParse(PulsePeriod.Text, out double p))
-                        {
-                            // Apply the period value based on waveform type
-                            string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
-                            if (waveform == "PULSE")
-                            {
-                                ApplyPulsePeriod(p);
-                            }
-                            else
-                            {
-                                ApplyPeriod(p);
-                            }
-
-                            // Update calculated frequency
-                            UpdateCalculatedRateValue();
-                        }
-                    };
-                }
-
-                _pulsePeriodUpdateTimer.Stop();
-                _pulsePeriodUpdateTimer.Start();
-            }
-            // In frequency mode, just update the calculated value
-            else if (_frequencyModeActive)
-            {
-                UpdateCalculatedRateValue();
-            }
-        }
-
-        // Add event handlers for the dual tone controls
         private void SecondaryFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -1661,7 +1591,6 @@ namespace DG2072_USB_Control
             }
         }
 
-        // Modify these methods to update the calculated value too
         private void ChannelFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -1711,8 +1640,6 @@ namespace DG2072_USB_Control
 
 
         }
-
-
 
         private void ChannelAmplitudeTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -1824,7 +1751,6 @@ namespace DG2072_USB_Control
             }
         }
 
-        // 6. Call pulse generator's methods from ChannelApplyButton_Click when needed
         private void ChannelApplyButton_Click(object sender, RoutedEventArgs e)
         {
             if (!isConnected) return;
@@ -1935,7 +1861,6 @@ namespace DG2072_USB_Control
 
         #region Pulse Parameter Handling
 
-
         private void ChannelPulsePeriodTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (pulseGenerator != null)
@@ -1959,32 +1884,6 @@ namespace DG2072_USB_Control
             if (pulseGenerator != null)
                 pulseGenerator.OnPulseRateModeToggleClicked(sender, e);
         }
-
-        // Add these methods to MainWindow.xaml.cs
-
-        //private void ChannelPulsePeriodTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        //{
-        //    if (pulseGenerator != null)
-        //        pulseGenerator.OnPulsePeriodTextChanged(sender, e);
-        //}
-
-        //private void ChannelPulsePeriodTextBox_LostFocus(object sender, RoutedEventArgs e)
-        //{
-        //    if (pulseGenerator != null)
-        //        pulseGenerator.OnPulsePeriodLostFocus(sender, e);
-        //}
-
-        //private void PulsePeriodUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-        //    if (pulseGenerator != null)
-        //        pulseGenerator.OnPulsePeriodUnitChanged(sender, e);
-        //}
-
-        //private void PulseRateModeToggle_Click(object sender, RoutedEventArgs e)
-        //{
-        //    if (pulseGenerator != null)
-        //        pulseGenerator.OnPulseRateModeToggleClicked(sender, e);
-        //}
 
         private void ChannelPulseRiseTimeTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -2044,7 +1943,6 @@ namespace DG2072_USB_Control
 
         #region Unit Selection Handlers
 
-        // Update these SelectionChanged handlers to also update calculated values
         private void ChannelFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -2052,7 +1950,6 @@ namespace DG2072_USB_Control
             if (double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
             {
                 ApplyFrequency(frequency);
-                // Update the calculated period when frequency unit changes
                 if (_frequencyModeActive && ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "PULSE")
                     UpdateCalculatedRateValue();
             }
@@ -2071,29 +1968,6 @@ namespace DG2072_USB_Control
         #endregion
 
         #region Apply Value Methods
-
-        private void ApplyPeriod(double period)
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                string unit = Services.UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-                double actualPeriod = period * Services.UnitConversionUtility.GetPeriodMultiplier(unit);
-
-                // Send period command directly
-                rigolDG2072.SendCommand($"SOURCE{activeChannel}:PERiod {actualPeriod}");
-                LogMessage($"Set CH{activeChannel} period to {period} {unit} ({actualPeriod} s)");
-
-                // Update frequency display but don't send to device
-                UpdateCalculatedRateValue();
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying period: {ex.Message}");
-            }
-        }
-
 
         // Make sure frequency changes use the direct frequency command
         private void ApplyFrequency(double frequency)
@@ -2123,10 +1997,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
-
-
-
         private void ApplyAmplitude(double amplitude)
         {
             string unit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
@@ -2143,66 +2013,6 @@ namespace DG2072_USB_Control
             {
                 // Update harmonics for the new amplitude
                 _harmonicsUIController.UpdateHarmonicsForFundamentalChange(actualAmplitude);
-            }
-        }
-
-
-        // Update the Apply method to handle both frequency and period modes
-        private void ApplySettings()
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
-
-                // For noise waveform, skip frequency/period settings
-                if (waveform != "NOISE")
-                {
-                    // Handle based on which mode is active
-                    if (_frequencyModeActive)
-                    {
-                        // In Frequency mode, send frequency directly to the device
-                        if (double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
-                        {
-                            string freqUnit = Services.UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-                            double actualFrequency = frequency * Services.UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-
-                            // Send frequency command directly
-                            rigolDG2072.SetFrequency(activeChannel, actualFrequency);
-                            LogMessage($"Set {waveform} frequency to {frequency} {freqUnit} ({actualFrequency} Hz)");
-                        }
-                    }
-                    else
-                    {
-                        // In Period mode, send period directly to the device
-                        if (double.TryParse(PulsePeriod.Text, out double period))
-                        {
-                            string periodUnit = Services.UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-                            double actualPeriod = period * Services.UnitConversionUtility.GetPeriodMultiplier(periodUnit);
-
-                            // Send period command directly
-                            if (waveform == "PULSE")
-                            {
-                                // For pulse waveform, use the specific pulse period method
-                                rigolDG2072.SetPulsePeriod(activeChannel, actualPeriod);
-                            }
-                            else
-                            {
-                                // For other waveforms, use general period command
-                                rigolDG2072.SendCommand($"SOURCE{activeChannel}:PERiod {actualPeriod}");
-                            }
-
-                            LogMessage($"Set {waveform} period to {period} {periodUnit} ({actualPeriod} s)");
-                        }
-                    }
-                }
-
-                // Apply other settings...
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying settings: {ex.Message}");
             }
         }
 
@@ -2290,11 +2100,6 @@ namespace DG2072_USB_Control
                     PulseRateModeDockPanel.Visibility = pulseVisibility;
             }
 
-            // Handle "To Period" button visibility - hide for noise waveform
-            // Handle "To Period" button visibility - hide for noise waveform
-            // Handle "To Period" button visibility - disable for noise waveform
-            // Handle "To Period" button visibility - hide for noise waveform
-            // Handle "To Period" button visibility - hide for noise waveform
             if (FrequencyPeriodModeToggle != null)
             {
                 FrequencyPeriodModeToggle.Visibility = isNoise ? Visibility.Collapsed : Visibility.Visible;
@@ -2348,13 +2153,8 @@ namespace DG2072_USB_Control
                 }
             }
 
-            // After the code that sets the frequency combo box visibility
-            // After the code that sets the frequency panel visibility
-            // Replace the problematic code with this
             if (FrequencyDockPanel != null && FrequencyPeriodModeToggle != null && PulseRateModeToggle != null)
             {
-                // Only hide toggle buttons if both frequency and period panels are hidden
-                // (which happens only for noise waveform)
                 if (FrequencyDockPanel.Visibility == Visibility.Collapsed &&
                     PeriodDockPanel.Visibility == Visibility.Collapsed)
                 {
@@ -2496,7 +2296,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
         private void SecondaryFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
             if (!isConnected) return;
@@ -2523,8 +2322,6 @@ namespace DG2072_USB_Control
                 UpdateFrequenciesFromCenterOffset();
             }
         }
-
-
 
         /// <summary>
         /// Updates UI elements based on the selected frequency/period mode
@@ -3102,9 +2899,7 @@ namespace DG2072_USB_Control
         #endregion
 
         #region Harmonics Event Handlers
-        // regon for harmonics events
-        // Add these methods to MainWindow.xaml.cs
-
+        
         private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
         {
             // The event is defined in the XAML file to be handled by MainWindow
@@ -3132,7 +2927,6 @@ namespace DG2072_USB_Control
                 }
             }
         }
-
 
         private void HarmonicCheckBox_Changed(object sender, RoutedEventArgs e)
         {
@@ -3181,7 +2975,6 @@ namespace DG2072_USB_Control
                 }
             }
         }
-
 
         private void RefreshDualToneSettings(int channel)
         {
@@ -3244,8 +3037,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
-
         private void UpdateFrequencyRatioComboBox(double ratio)
         {
             // Find the closest matching ratio in the combo box
@@ -3273,7 +3064,6 @@ namespace DG2072_USB_Control
                 FrequencyRatioComboBox.SelectedIndex = closestIndex;
             }
         }
-
 
         private void RefreshArbitraryWaveformSettings(int channel)
         {
@@ -3321,8 +3111,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
-        // These methods can call the public methods directly
         private void RefreshHarmonicSettings()
         {
             if (_harmonicsUIController != null)
@@ -3642,7 +3430,6 @@ namespace DG2072_USB_Control
 
 
         #endregion
-
 
         #region DC Mode Controls
 
