@@ -17,6 +17,7 @@ using System.Threading.Channels;
 using DG2072_USB_Control.Continuous.Harmonics;
 using DG2072_USB_Control.Continuous.PulseGenerator;
 using DG2072_USB_Control.Continuous.DualTone;
+using DG2072_USB_Control.Continuous.Ramp;
 
 
 
@@ -71,6 +72,9 @@ namespace DG2072_USB_Control
         // Dual Tone management
         private DualToneGen dualToneGen;
 
+        // Ramp generator management
+        private RampGen rampGenerator;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -108,6 +112,8 @@ namespace DG2072_USB_Control
                 if (pulseGenerator != null)
                     pulseGenerator.ActiveChannel = activeChannel;
 
+                if (rampGenerator != null)
+                    rampGenerator.ActiveChannel = activeChannel;
                 // Other component updates...
             }
             else
@@ -122,6 +128,9 @@ namespace DG2072_USB_Control
                 if (pulseGenerator != null)
                     pulseGenerator.ActiveChannel = activeChannel;
 
+                // Add this missing code:
+                if (rampGenerator != null)
+                    rampGenerator.ActiveChannel = activeChannel;
                 // Other component updates...
             }
 
@@ -288,10 +297,11 @@ namespace DG2072_USB_Control
                     UpdateOutputState(ChannelOutputToggle, activeChannel);
 
                     // Update waveform-specific parameters
-                    if (waveform == "RAMP")
+                    if (waveform == "RAMP" && rampGenerator != null)
                     {
-                        UpdateSymmetryValue(Symm, activeChannel);
+                        rampGenerator.UpdateSymmetryValue();
                     }
+
                     else if (waveform == "SQUARE")
                     {
                         UpdateDutyCycleValue(DutyCycle, activeChannel);
@@ -585,23 +595,10 @@ namespace DG2072_USB_Control
 
         private void UpdateSymmetryValue(TextBox symmetryTextBox, int channel)
         {
-            try
+            if (rampGenerator != null)
             {
-                // Only update if the waveform is Ramp
-                string currentWaveform = rigolDG2072.SendQuery($":SOUR{channel}:FUNC?").Trim().ToUpper();
-                if (currentWaveform.Contains("RAMP"))
-                {
-                    double symmetry = rigolDG2072.GetSymmetry(channel);
-
-                    Dispatcher.Invoke(() =>
-                    {
-                        symmetryTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(symmetry);
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating symmetry for channel {channel}: {ex.Message}");
+                rampGenerator.ActiveChannel = channel;
+                rampGenerator.UpdateSymmetryValue();
             }
         }
 
@@ -956,6 +953,10 @@ namespace DG2072_USB_Control
             // Initialize the dual tone generator after UI references are set up
             dualToneGen = new DualToneGen(rigolDG2072, activeChannel, this);
             dualToneGen.LogEvent += (s, message) => LogMessage(message);
+
+            // Initialize the ramp generator after UI references are set up
+            rampGenerator = new RampGen(rigolDG2072, activeChannel, this);
+            rampGenerator.LogEvent += (s, message) => LogMessage(message);
 
             // After window initialization, use a small delay before auto-connecting
             // This gives the UI time to fully render before connecting
@@ -1637,40 +1638,124 @@ namespace DG2072_USB_Control
             _phaseUpdateTimer.Start();
         }
 
+
         private void ChannelSymmetryTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (!isConnected) return;
-            if (!double.TryParse(Symm.Text, out double symmetry)) return;
-
-            if (_symmetryUpdateTimer == null)
-            {
-                _symmetryUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _symmetryUpdateTimer.Tick += (s, args) =>
-                {
-                    _symmetryUpdateTimer.Stop();
-                    if (double.TryParse(Symm.Text, out double sym))
-                    {
-                        rigolDG2072.SetSymmetry(activeChannel, sym);
-                    }
-                };
-            }
-
-            _symmetryUpdateTimer.Stop();
-            _symmetryUpdateTimer.Start();
+            if (rampGenerator != null)
+                rampGenerator.OnSymmetryTextChanged(sender, e);
         }
 
         private void ChannelSymmetryTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            if (double.TryParse(Symm.Text, out double symmetry))
-            {
-                // Ensure value is in valid range
-                symmetry = Math.Max(0, Math.Min(100, symmetry));
-                Symm.Text = UnitConversionUtility.FormatWithMinimumDecimals(symmetry);
-            }
+            if (rampGenerator != null)
+                rampGenerator.OnSymmetryLostFocus(sender, e);
         }
+
+        //private void ChannelApplyButton_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+
+        //    try
+        //    {
+        //        // Get current waveform type
+        //        string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
+
+        //        // CASE 1: PULSE WAVEFORM - Use the dedicated PulseGen class
+        //        if (waveform == "PULSE" && pulseGenerator != null)
+        //        {
+        //            // The pulseGenerator will handle all pulse-specific parameters and validations
+        //            pulseGenerator.ApplyPulseParameters();
+        //        }
+        //        // CASE 2: ALL OTHER WAVEFORMS - Handle normally
+        //        else
+        //        {
+        //            // First adjust the values and units for better display
+        //            if (_frequencyModeActive)
+        //            {
+        //                AdjustFrequencyAndUnit(ChannelFrequencyTextBox, ChannelFrequencyUnitComboBox);
+        //            }
+        //            else
+        //            {
+        //                // For period mode, use PulseGen's adjustment method if available
+        //                if (pulseGenerator != null)
+        //                {
+        //                    pulseGenerator.AdjustPulseTimeAndUnit(PulsePeriod, PulsePeriodUnitComboBox);
+        //                }
+        //            }
+
+        //            AdjustAmplitudeAndUnit(ChannelAmplitudeTextBox, ChannelAmplitudeUnitComboBox);
+
+        //            // Apply based on mode
+        //            if (_frequencyModeActive)
+        //            {
+        //                // Check if frequency value is valid
+        //                if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
+        //                {
+        //                    LogMessage($"Invalid frequency value for CH{activeChannel}");
+        //                    return;
+        //                }
+
+        //                // Convert frequency unit
+        //                string freqUnit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
+        //                double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
+        //                double actualFrequency = frequency * freqMultiplier;
+
+        //                rigolDG2072.SetFrequency(activeChannel, actualFrequency);
+        //            }
+        //            else
+        //            {
+        //                // Check if period value is valid
+        //                if (!double.TryParse(PulsePeriod.Text, out double period))
+        //                {
+        //                    LogMessage($"Invalid period value for CH{activeChannel}");
+        //                    return;
+        //                }
+
+        //                // Convert period unit
+        //                string periodUnit = UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
+        //                double periodMultiplier = UnitConversionUtility.GetPeriodMultiplier(periodUnit);
+        //                double actualPeriod = period * periodMultiplier;
+
+        //                rigolDG2072.SendCommand($"SOURCE{activeChannel}:PERiod {actualPeriod}");
+        //            }
+
+        //            // Apply other parameters (amplitude, offset, phase)
+        //            if (double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) &&
+        //                double.TryParse(ChannelOffsetTextBox.Text, out double offset) &&
+        //                double.TryParse(ChannelPhaseTextBox.Text, out double phase))
+        //            {
+        //                string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
+        //                double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
+        //                double actualAmplitude = amplitude * ampMultiplier;
+
+        //                rigolDG2072.SetAmplitude(activeChannel, actualAmplitude);
+        //                rigolDG2072.SetOffset(activeChannel, offset);
+        //                rigolDG2072.SetPhase(activeChannel, phase);
+        //            }
+
+        //            // Apply waveform-specific parameters
+        //            if (waveform == "RAMP" && rampGenerator != null)
+        //            {
+        //                rampGenerator.ApplyRampParameters();
+        //            }
+        //            else if (waveform == "SQUARE" && double.TryParse(DutyCycle.Text, out double dutyCycle))
+        //            {
+        //                rigolDG2072.SetDutyCycle(activeChannel, dutyCycle);
+        //                LogMessage($"Applied duty cycle {dutyCycle}% to CH{activeChannel}");
+        //            }
+        //        }
+
+        //        // Refresh the UI to show the actual values from the device
+        //        RefreshChannelSettings();
+        //        LogMessage($"Applied settings to CH{activeChannel}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error applying settings: {ex.Message}");
+        //        MessageBox.Show($"Error applying settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        //    }
+        //}
+
 
         private void ChannelApplyButton_Click(object sender, RoutedEventArgs e)
         {
@@ -1681,90 +1766,18 @@ namespace DG2072_USB_Control
                 // Get current waveform type
                 string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
 
-                // CASE 1: PULSE WAVEFORM - Use the dedicated PulseGen class
+                // Handle waveform-specific parameters first
                 if (waveform == "PULSE" && pulseGenerator != null)
                 {
-                    // The pulseGenerator will handle all pulse-specific parameters and validations
                     pulseGenerator.ApplyPulseParameters();
                 }
-                // CASE 2: ALL OTHER WAVEFORMS - Handle normally
                 else
                 {
-                    // First adjust the values and units for better display
-                    if (_frequencyModeActive)
-                    {
-                        AdjustFrequencyAndUnit(ChannelFrequencyTextBox, ChannelFrequencyUnitComboBox);
-                    }
-                    else
-                    {
-                        // For period mode, use PulseGen's adjustment method if available
-                        if (pulseGenerator != null)
-                        {
-                            pulseGenerator.AdjustPulseTimeAndUnit(PulsePeriod, PulsePeriodUnitComboBox);
-                        }
-                    }
-
-                    AdjustAmplitudeAndUnit(ChannelAmplitudeTextBox, ChannelAmplitudeUnitComboBox);
-
-                    // Apply based on mode
-                    if (_frequencyModeActive)
-                    {
-                        // Check if frequency value is valid
-                        if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
-                        {
-                            LogMessage($"Invalid frequency value for CH{activeChannel}");
-                            return;
-                        }
-
-                        // Convert frequency unit
-                        string freqUnit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-                        double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-                        double actualFrequency = frequency * freqMultiplier;
-
-                        rigolDG2072.SetFrequency(activeChannel, actualFrequency);
-                    }
-                    else
-                    {
-                        // Check if period value is valid
-                        if (!double.TryParse(PulsePeriod.Text, out double period))
-                        {
-                            LogMessage($"Invalid period value for CH{activeChannel}");
-                            return;
-                        }
-
-                        // Convert period unit
-                        string periodUnit = UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-                        double periodMultiplier = UnitConversionUtility.GetPeriodMultiplier(periodUnit);
-                        double actualPeriod = period * periodMultiplier;
-
-                        rigolDG2072.SendCommand($"SOURCE{activeChannel}:PERiod {actualPeriod}");
-                    }
-
-                    // Apply other parameters (amplitude, offset, phase)
-                    if (double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) &&
-                        double.TryParse(ChannelOffsetTextBox.Text, out double offset) &&
-                        double.TryParse(ChannelPhaseTextBox.Text, out double phase))
-                    {
-                        string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
-                        double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                        double actualAmplitude = amplitude * ampMultiplier;
-
-                        rigolDG2072.SetAmplitude(activeChannel, actualAmplitude);
-                        rigolDG2072.SetOffset(activeChannel, offset);
-                        rigolDG2072.SetPhase(activeChannel, phase);
-                    }
+                    // Apply common parameters
+                    ApplyCommonParameters();
 
                     // Apply waveform-specific parameters
-                    if (waveform == "RAMP" && double.TryParse(Symm.Text, out double symmetry))
-                    {
-                        rigolDG2072.SetSymmetry(activeChannel, symmetry);
-                        LogMessage($"Applied symmetry {symmetry}% to CH{activeChannel}");
-                    }
-                    else if (waveform == "SQUARE" && double.TryParse(DutyCycle.Text, out double dutyCycle))
-                    {
-                        rigolDG2072.SetDutyCycle(activeChannel, dutyCycle);
-                        LogMessage($"Applied duty cycle {dutyCycle}% to CH{activeChannel}");
-                    }
+                    ApplyWaveformSpecificParameters(waveform);
                 }
 
                 // Refresh the UI to show the actual values from the device
@@ -1777,6 +1790,99 @@ namespace DG2072_USB_Control
                 MessageBox.Show($"Error applying settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private void ApplyCommonParameters()
+        {
+            // First adjust the values and units for better display
+            if (_frequencyModeActive)
+            {
+                AdjustFrequencyAndUnit(ChannelFrequencyTextBox, ChannelFrequencyUnitComboBox);
+            }
+            else if (pulseGenerator != null)
+            {
+                pulseGenerator.AdjustPulseTimeAndUnit(PulsePeriod, PulsePeriodUnitComboBox);
+            }
+
+            AdjustAmplitudeAndUnit(ChannelAmplitudeTextBox, ChannelAmplitudeUnitComboBox);
+
+            // Apply frequency or period
+            ApplyFrequencyOrPeriod();
+
+            // Apply amplitude, offset, phase
+            ApplyAmplitudeOffsetPhase();
+        }
+
+        private void ApplyFrequencyOrPeriod()
+        {
+            if (_frequencyModeActive)
+            {
+                if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
+                {
+                    LogMessage($"Invalid frequency value for CH{activeChannel}");
+                    return;
+                }
+
+                string freqUnit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
+                double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
+                double actualFrequency = frequency * freqMultiplier;
+
+                rigolDG2072.SetFrequency(activeChannel, actualFrequency);
+            }
+            else
+            {
+                if (!double.TryParse(PulsePeriod.Text, out double period))
+                {
+                    LogMessage($"Invalid period value for CH{activeChannel}");
+                    return;
+                }
+
+                string periodUnit = UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
+                double periodMultiplier = UnitConversionUtility.GetPeriodMultiplier(periodUnit);
+                double actualPeriod = period * periodMultiplier;
+
+                rigolDG2072.SendCommand($"SOURCE{activeChannel}:PERiod {actualPeriod}");
+            }
+        }
+
+        private void ApplyAmplitudeOffsetPhase()
+        {
+            if (!double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) ||
+                !double.TryParse(ChannelOffsetTextBox.Text, out double offset) ||
+                !double.TryParse(ChannelPhaseTextBox.Text, out double phase))
+            {
+                LogMessage("Invalid amplitude, offset, or phase values");
+                return;
+            }
+
+            string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
+            double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
+            double actualAmplitude = amplitude * ampMultiplier;
+
+            rigolDG2072.SetAmplitude(activeChannel, actualAmplitude);
+            rigolDG2072.SetOffset(activeChannel, offset);
+            rigolDG2072.SetPhase(activeChannel, phase);
+        }
+
+        private void ApplyWaveformSpecificParameters(string waveform)
+        {
+            switch (waveform)
+            {
+                case "RAMP":
+                    if (rampGenerator != null)
+                        rampGenerator.ApplyRampParameters();
+                    break;
+
+                case "SQUARE":
+                    if (double.TryParse(DutyCycle.Text, out double dutyCycle))
+                    {
+                        rigolDG2072.SetDutyCycle(activeChannel, dutyCycle);
+                        LogMessage($"Applied duty cycle {dutyCycle}% to CH{activeChannel}");
+                    }
+                    break;
+            }
+        }
+
+
 
         #endregion
 
