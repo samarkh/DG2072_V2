@@ -16,6 +16,7 @@ using System.Threading.Channels;
 
 using DG2072_USB_Control.Continuous.Harmonics;
 using DG2072_USB_Control.Continuous.PulseGenerator;
+using DG2072_USB_Control.Continuous.DualTone;
 
 
 
@@ -49,7 +50,7 @@ namespace DG2072_USB_Control
         private DockPanel DutyCycleDockPanel;
 
         // Add this with the other timer declarations in MainWindow.xaml.cs:
-        private DispatcherTimer _secondaryFrequencyUpdateTimer;
+       // private DispatcherTimer _secondaryFrequencyUpdateTimer;
         private bool _frequencyModeActive = true; // Default to frequency mode
         private DockPanel PulsePeriodDockPanel;
         private DockPanel PhaseDockPanel;
@@ -67,6 +68,9 @@ namespace DG2072_USB_Control
         // pulse generator management
         private PulseGen pulseGenerator;
 
+        // Dual Tone management
+        private DualToneGen dualToneGen;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -81,6 +85,8 @@ namespace DG2072_USB_Control
             // Initialize auto-refresh feature
             InitializeAutoRefresh();
         }
+
+
 
         //**************** Regions
 
@@ -947,7 +953,9 @@ namespace DG2072_USB_Control
             pulseGenerator = new PulseGen(rigolDG2072, activeChannel, this);
             pulseGenerator.LogEvent += (s, message) => LogMessage(message);
 
-
+            // Initialize the dual tone generator after UI references are set up
+            dualToneGen = new DualToneGen(rigolDG2072, activeChannel, this);
+            dualToneGen.LogEvent += (s, message) => LogMessage(message);
 
             // After window initialization, use a small delay before auto-connecting
             // This gives the UI time to fully render before connecting
@@ -1516,80 +1524,80 @@ namespace DG2072_USB_Control
             UpdateWaveformSpecificControls(waveform);
         }
 
-        private void SecondaryFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (!double.TryParse(SecondaryFrequencyTextBox.Text, out double frequency)) return;
+        //private void SecondaryFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (!double.TryParse(SecondaryFrequencyTextBox.Text, out double frequency)) return;
 
-            // Use a timer similar to primary frequency
-            if (_secondaryFrequencyUpdateTimer == null)
-            {
-                _secondaryFrequencyUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _secondaryFrequencyUpdateTimer.Tick += (s, args) =>
-                {
-                    _secondaryFrequencyUpdateTimer.Stop();
-                    if (double.TryParse(SecondaryFrequencyTextBox.Text, out double freq))
-                    {
-                        ApplyDualToneParameters();
-                    }
-                };
-            }
+        //    // Use a timer similar to primary frequency
+        //    if (_secondaryFrequencyUpdateTimer == null)
+        //    {
+        //        _secondaryFrequencyUpdateTimer = new DispatcherTimer
+        //        {
+        //            Interval = TimeSpan.FromMilliseconds(500)
+        //        };
+        //        _secondaryFrequencyUpdateTimer.Tick += (s, args) =>
+        //        {
+        //            _secondaryFrequencyUpdateTimer.Stop();
+        //            if (double.TryParse(SecondaryFrequencyTextBox.Text, out double freq))
+        //            {
+        //                ApplyDualToneParameters();
+        //            }
+        //        };
+        //    }
 
-            _secondaryFrequencyUpdateTimer.Stop();
-            _secondaryFrequencyUpdateTimer.Start();
-        }
+        //    _secondaryFrequencyUpdateTimer.Stop();
+        //    _secondaryFrequencyUpdateTimer.Start();
+        //}
 
-        private void SynchronizeFrequenciesCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void SynchronizeFrequenciesCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            bool isSynchronized = SynchronizeFrequenciesCheckBox.IsChecked == true;
-            SecondaryFrequencyDockPanel.IsEnabled = !isSynchronized;
-            FrequencyRatioComboBox.IsEnabled = isSynchronized;
+        //    bool isSynchronized = SynchronizeFrequenciesCheckBox.IsChecked == true;
+        //    SecondaryFrequencyDockPanel.IsEnabled = !isSynchronized;
+        //    FrequencyRatioComboBox.IsEnabled = isSynchronized;
 
-            if (isSynchronized && double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
-            {
-                // Update secondary frequency based on the ratio
-                double frequencyRatio = 2.0; // Default
-                if (FrequencyRatioComboBox.SelectedItem is ComboBoxItem selectedItem &&
-                    double.TryParse(selectedItem.Content.ToString(), out double ratio))
-                {
-                    frequencyRatio = ratio;
-                }
+        //    if (isSynchronized && double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
+        //    {
+        //        // Update secondary frequency based on the ratio
+        //        double frequencyRatio = 2.0; // Default
+        //        if (FrequencyRatioComboBox.SelectedItem is ComboBoxItem selectedItem &&
+        //            double.TryParse(selectedItem.Content.ToString(), out double ratio))
+        //        {
+        //            frequencyRatio = ratio;
+        //        }
 
-                double secondaryFreq = primaryFreq * frequencyRatio;
-                SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
+        //        double secondaryFreq = primaryFreq * frequencyRatio;
+        //        SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
 
-                // Apply the changes immediately
-                ApplyDualToneParameters();
-            }
-        }
+        //        // Apply the changes immediately
+        //        ApplyDualToneParameters();
+        //    }
+        //}
 
-        private void FrequencyRatioComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!isConnected) return;
+        //private void FrequencyRatioComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (!isConnected) return;
 
-            ComboBox ratioComboBox = sender as ComboBox;
-            if (ratioComboBox != null && ratioComboBox.SelectedItem is ComboBoxItem selectedItem)
-            {
-                string ratioText = selectedItem.Content.ToString();
-                if (double.TryParse(ratioText, out double ratio))
-                {
-                    frequencyRatio = ratio;
+        //    ComboBox ratioComboBox = sender as ComboBox;
+        //    if (ratioComboBox != null && ratioComboBox.SelectedItem is ComboBoxItem selectedItem)
+        //    {
+        //        string ratioText = selectedItem.Content.ToString();
+        //        if (double.TryParse(ratioText, out double ratio))
+        //        {
+        //            frequencyRatio = ratio;
 
-                    // If synchronized is checked, update the secondary frequency
-                    if (SynchronizeFrequenciesCheckBox.IsChecked == true &&
-                        double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
-                    {
-                        double secondaryFreq = primaryFreq * frequencyRatio;
-                        SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
-                    }
-                }
-            }
-        }
+        //            // If synchronized is checked, update the secondary frequency
+        //            if (SynchronizeFrequenciesCheckBox.IsChecked == true &&
+        //                double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
+        //            {
+        //                double secondaryFreq = primaryFreq * frequencyRatio;
+        //                SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
+        //            }
+        //        }
+        //    }
+        //}
 
         private void ChannelFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -2296,32 +2304,32 @@ namespace DG2072_USB_Control
             }
         }
 
-        private void SecondaryFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (double.TryParse(SecondaryFrequencyTextBox.Text, out double frequency))
-            {
-                ApplyDualToneParameters();
-            }
-        }
+        //private void SecondaryFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (double.TryParse(SecondaryFrequencyTextBox.Text, out double frequency))
+        //    {
+        //        ApplyDualToneParameters();
+        //    }
+        //}
 
-        private void CenterFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (double.TryParse(CenterFrequencyTextBox.Text, out double frequency))
-            {
-                UpdateFrequenciesFromCenterOffset();
-            }
-        }
+        //private void CenterFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (double.TryParse(CenterFrequencyTextBox.Text, out double frequency))
+        //    {
+        //        UpdateFrequenciesFromCenterOffset();
+        //    }
+        //}
 
-        private void OffsetFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (double.TryParse(OffsetFrequencyTextBox.Text, out double frequency))
-            {
-                UpdateFrequenciesFromCenterOffset();
-            }
-        }
+        //private void OffsetFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (double.TryParse(OffsetFrequencyTextBox.Text, out double frequency))
+        //    {
+        //        UpdateFrequenciesFromCenterOffset();
+        //    }
+        //}
 
         /// <summary>
         /// Updates UI elements based on the selected frequency/period mode
@@ -2554,346 +2562,516 @@ namespace DG2072_USB_Control
 
         #endregion
 
-        #region DualTone
 
-        // Handler for mode selection
+        #region DualTone Event Handlers
+
         private void DualToneModeChanged(object sender, RoutedEventArgs e)
         {
-            if (!isConnected) return;
-
-            bool isDirectMode = DirectFrequencyMode.IsChecked == true;
-
-            // Toggle visibility of panels
-            DirectFrequencyPanel.Visibility = isDirectMode ? Visibility.Visible : Visibility.Collapsed;
-            CenterOffsetPanel.Visibility = isDirectMode ? Visibility.Collapsed : Visibility.Visible;
-
-            // If switching modes, update the displayed values
-            if (isDirectMode)
-            {
-                // Set values from primary frequency controls and ratio
-                UpdateSecondaryFrequencyForDualTone();
-            }
-            else
-            {
-                // Calculate center and offset from current F1 and F2
-                UpdateCenterOffsetFromFrequencies();
-            }
+            if (dualToneGen != null)
+                dualToneGen.OnDualToneModeChanged(sender, e);
         }
 
-        private void UpdateSecondaryFrequencyForDualTone()
+        private void SynchronizeFrequenciesCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
-            if (!isConnected) return;
-
-            try
-            {
-                if (double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
-                {
-                    // Get the current ratio
-                    double currentRatio = 2.0; // Default
-                    if (FrequencyRatioComboBox.SelectedItem is ComboBoxItem selectedItem &&
-                        double.TryParse(selectedItem.Content.ToString(), out double ratio))
-                    {
-                        currentRatio = ratio;
-                    }
-
-                    // Calculate secondary frequency
-                    double secondaryFreq = primaryFreq * currentRatio;
-
-                    // Update secondary frequency display
-                    SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
-
-                    // If in dual tone mode, apply the changes
-                    if (((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "DUAL TONE")
-                    {
-                        ApplyDualToneParameters();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating secondary frequency: {ex.Message}");
-            }
+            if (dualToneGen != null)
+                dualToneGen.OnSynchronizeFrequenciesCheckChanged(sender, e);
         }
 
-        private void ApplyDualToneParameters()
+        private void FrequencyRatioComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (!isConnected) return;
-
-            try
-            {
-                // Handle based on mode
-                if (CenterOffsetMode != null && CenterOffsetMode.IsChecked == true)
-                {
-                    // Already using center/offset mode, just update calculations
-                    UpdateFrequenciesFromCenterOffset();
-                }
-                else
-                {
-                    // Direct mode - similar to original function
-
-                    // Get primary frequency
-                    if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
-                        return;
-
-                    string freqUnit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-                    double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-                    double actualPrimaryFrequency = frequency * freqMultiplier;
-
-                    // Get secondary frequency
-                    double actualSecondaryFrequency = actualPrimaryFrequency * 2.0; // Default
-                    if (SecondaryFrequencyTextBox != null && double.TryParse(SecondaryFrequencyTextBox.Text, out double secondaryFreq))
-                    {
-                        string secondaryFreqUnit = UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox);
-                        double secondaryFreqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(secondaryFreqUnit);
-                        actualSecondaryFrequency = secondaryFreq * secondaryFreqMultiplier;
-                    }
-
-                    // Get amplitude, offset, phase
-                    if (!double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) ||
-                        !double.TryParse(ChannelOffsetTextBox.Text, out double offset) ||
-                        !double.TryParse(ChannelPhaseTextBox.Text, out double phase))
-                        return;
-
-                    string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
-                    double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                    double actualAmplitude = amplitude * ampMultiplier;
-
-                    // Create parameters dictionary for our improved implementation
-                    Dictionary<string, object> parameters = new Dictionary<string, object>
-            {
-                { "Frequency", actualPrimaryFrequency },
-                { "Frequency2", actualSecondaryFrequency },
-                { "Amplitude", actualAmplitude },
-                { "Offset", offset },
-                { "Phase", phase }
-            };
-
-                    // Apply the dual tone waveform using our improved method
-                    rigolDG2072.ApplyDualToneWaveform(activeChannel, parameters);
-
-                    LogMessage($"Applied Dual Tone waveform to CH{activeChannel} with Primary Freq={frequency} {freqUnit}, " +
-                             $"Secondary Freq={SecondaryFrequencyTextBox.Text} {UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox)}, " +
-                             $"Amp={amplitude} {ampUnit}, Offset={offset}V, Phase={phase}°");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying dual tone settings: {ex.Message}");
-            }
+            if (dualToneGen != null)
+                dualToneGen.OnFrequencyRatioSelectionChanged(sender, e);
         }
 
-        // Center frequency changed
-        private void CenterFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void SecondaryFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (!isConnected) return;
-            if (!double.TryParse(CenterFrequencyTextBox.Text, out double centerFrequency)) return;
-
-            if (CenterOffsetMode.IsChecked != true) return;
-
-            // Use a timer similar to primary frequency
-            if (_centerFrequencyUpdateTimer == null)
-            {
-                _centerFrequencyUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _centerFrequencyUpdateTimer.Tick += (s, args) =>
-                {
-                    _centerFrequencyUpdateTimer.Stop();
-                    UpdateFrequenciesFromCenterOffset();
-                };
-            }
-
-            _centerFrequencyUpdateTimer.Stop();
-            _centerFrequencyUpdateTimer.Start();
+            if (dualToneGen != null)
+                dualToneGen.OnSecondaryFrequencyTextChanged(sender, e);
         }
 
-        // Offset frequency changed
-        private void OffsetFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void SecondaryFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            if (!isConnected) return;
-            if (!double.TryParse(OffsetFrequencyTextBox.Text, out double offsetFrequency)) return;
-
-            if (CenterOffsetMode.IsChecked != true) return;
-
-            // Use a timer similar to primary frequency
-            if (_offsetFrequencyUpdateTimer == null)
-            {
-                _offsetFrequencyUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _offsetFrequencyUpdateTimer.Tick += (s, args) =>
-                {
-                    _offsetFrequencyUpdateTimer.Stop();
-                    UpdateFrequenciesFromCenterOffset();
-                };
-            }
-
-            _offsetFrequencyUpdateTimer.Stop();
-            _offsetFrequencyUpdateTimer.Start();
-        }
-
-        // Unit combobox selection changed
-        private void CenterFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (CenterOffsetMode.IsChecked != true) return;
-
-            if (double.TryParse(CenterFrequencyTextBox.Text, out _))
-            {
-                UpdateFrequenciesFromCenterOffset();
-            }
-        }
-
-        private void OffsetFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (CenterOffsetMode.IsChecked != true) return;
-
-            if (double.TryParse(OffsetFrequencyTextBox.Text, out _))
-            {
-                UpdateFrequenciesFromCenterOffset();
-            }
+            if (dualToneGen != null)
+                dualToneGen.OnSecondaryFrequencyLostFocus(sender, e);
         }
 
         private void SecondaryFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (!isConnected) return;
-            if (DirectFrequencyMode.IsChecked != true) return;
+            if (dualToneGen != null)
+                dualToneGen.OnSecondaryFrequencyUnitChanged(sender, e);
+        }
 
-            if (double.TryParse(SecondaryFrequencyTextBox.Text, out _))
+        private void CenterFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dualToneGen != null)
+                dualToneGen.OnCenterFrequencyTextChanged(sender, e);
+        }
+
+        private void CenterFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (dualToneGen != null)
+                dualToneGen.OnCenterFrequencyLostFocus(sender, e);
+        }
+
+        private void CenterFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dualToneGen != null)
+                dualToneGen.OnCenterFrequencyUnitChanged(sender, e);
+        }
+
+        private void OffsetFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (dualToneGen != null)
+                dualToneGen.OnOffsetFrequencyTextChanged(sender, e);
+        }
+
+        private void OffsetFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (dualToneGen != null)
+                dualToneGen.OnOffsetFrequencyLostFocus(sender, e);
+        }
+
+        private void OffsetFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dualToneGen != null)
+                dualToneGen.OnOffsetFrequencyUnitChanged(sender, e);
+        }
+
+        #endregion
+
+
+
+
+
+        #region DualTone
+
+
+        //private void DualToneModeChanged(object sender, RoutedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnDualToneModeChanged(sender, e);
+        //}
+
+        //private void SecondaryFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnSecondaryFrequencyTextChanged(sender, e);
+        //}
+
+        //private void SecondaryFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnSecondaryFrequencyLostFocus(sender, e);
+        //}
+
+        //private void SynchronizeFrequenciesCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnSynchronizeFrequenciesCheckChanged(sender, e);
+        //}
+
+        //private void FrequencyRatioComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnFrequencyRatioSelectionChanged(sender, e);
+        //}
+
+        //private void SecondaryFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnSecondaryFrequencyUnitChanged(sender, e);
+        //}
+
+        //private void CenterFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnCenterFrequencyTextChanged(sender, e);
+        //}
+
+        //private void CenterFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnCenterFrequencyLostFocus(sender, e);
+        //}
+
+        //private void CenterFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnCenterFrequencyUnitChanged(sender, e);
+        //}
+
+        //private void OffsetFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnOffsetFrequencyTextChanged(sender, e);
+        //}
+
+        //private void OffsetFrequencyTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnOffsetFrequencyLostFocus(sender, e);
+        //}
+
+        //private void OffsetFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (dualToneGen != null)
+        //        dualToneGen.OnOffsetFrequencyUnitChanged(sender, e);
+        //}
+
+        //Simplified RefreshDualToneSettings method
+        private void RefreshDualToneSettings(int channel)
+        {
+            if (dualToneGen != null)
             {
-                ApplyDualToneParameters();
+                dualToneGen.ActiveChannel = channel;
+                dualToneGen.RefreshDualToneSettings();
             }
         }
+
+
+        // This method delegates to the DualToneGen instance
+        private void ApplyDualToneParameters()
+        {
+            if (dualToneGen != null)
+                dualToneGen.ApplyDualToneParameters();
+        }
+
+
+
+
+
+
+
+
+        // Handler for mode selection
+        //private void DualToneModeChanged(object sender, RoutedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+
+        //    bool isDirectMode = DirectFrequencyMode.IsChecked == true;
+
+        //    // Toggle visibility of panels
+        //    DirectFrequencyPanel.Visibility = isDirectMode ? Visibility.Visible : Visibility.Collapsed;
+        //    CenterOffsetPanel.Visibility = isDirectMode ? Visibility.Collapsed : Visibility.Visible;
+
+        //    // If switching modes, update the displayed values
+        //    if (isDirectMode)
+        //    {
+        //        // Set values from primary frequency controls and ratio
+        //        UpdateSecondaryFrequencyForDualTone();
+        //    }
+        //    else
+        //    {
+        //        // Calculate center and offset from current F1 and F2
+        //        UpdateCenterOffsetFromFrequencies();
+        //    }
+        //}
+
+        //private void UpdateSecondaryFrequencyForDualTone()
+        //{
+        //    if (!isConnected) return;
+
+        //    try
+        //    {
+        //        if (double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
+        //        {
+        //            // Get the current ratio
+        //            double currentRatio = 2.0; // Default
+        //            if (FrequencyRatioComboBox.SelectedItem is ComboBoxItem selectedItem &&
+        //                double.TryParse(selectedItem.Content.ToString(), out double ratio))
+        //            {
+        //                currentRatio = ratio;
+        //            }
+
+        //            // Calculate secondary frequency
+        //            double secondaryFreq = primaryFreq * currentRatio;
+
+        //            // Update secondary frequency display
+        //            SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
+
+        //            // If in dual tone mode, apply the changes
+        //            if (((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "DUAL TONE")
+        //            {
+        //                ApplyDualToneParameters();
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error updating secondary frequency: {ex.Message}");
+        //    }
+        //}
+
+        //private void ApplyDualToneParameters()
+        //{
+        //    if (!isConnected) return;
+
+        //    try
+        //    {
+        //        // Handle based on mode
+        //        if (CenterOffsetMode != null && CenterOffsetMode.IsChecked == true)
+        //        {
+        //            // Already using center/offset mode, just update calculations
+        //            UpdateFrequenciesFromCenterOffset();
+        //        }
+        //        else
+        //        {
+        //            // Direct mode - similar to original function
+
+        //            // Get primary frequency
+        //            if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
+        //                return;
+
+        //            string freqUnit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
+        //            double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
+        //            double actualPrimaryFrequency = frequency * freqMultiplier;
+
+        //            // Get secondary frequency
+        //            double actualSecondaryFrequency = actualPrimaryFrequency * 2.0; // Default
+        //            if (SecondaryFrequencyTextBox != null && double.TryParse(SecondaryFrequencyTextBox.Text, out double secondaryFreq))
+        //            {
+        //                string secondaryFreqUnit = UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox);
+        //                double secondaryFreqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(secondaryFreqUnit);
+        //                actualSecondaryFrequency = secondaryFreq * secondaryFreqMultiplier;
+        //            }
+
+        //            // Get amplitude, offset, phase
+        //            if (!double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) ||
+        //                !double.TryParse(ChannelOffsetTextBox.Text, out double offset) ||
+        //                !double.TryParse(ChannelPhaseTextBox.Text, out double phase))
+        //                return;
+
+        //            string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
+        //            double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
+        //            double actualAmplitude = amplitude * ampMultiplier;
+
+        //            // Create parameters dictionary for our improved implementation
+        //            Dictionary<string, object> parameters = new Dictionary<string, object>
+        //    {
+        //        { "Frequency", actualPrimaryFrequency },
+        //        { "Frequency2", actualSecondaryFrequency },
+        //        { "Amplitude", actualAmplitude },
+        //        { "Offset", offset },
+        //        { "Phase", phase }
+        //    };
+
+        //            // Apply the dual tone waveform using our improved method
+        //            rigolDG2072.ApplyDualToneWaveform(activeChannel, parameters);
+
+        //            LogMessage($"Applied Dual Tone waveform to CH{activeChannel} with Primary Freq={frequency} {freqUnit}, " +
+        //                     $"Secondary Freq={SecondaryFrequencyTextBox.Text} {UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox)}, " +
+        //                     $"Amp={amplitude} {ampUnit}, Offset={offset}V, Phase={phase}°");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error applying dual tone settings: {ex.Message}");
+        //    }
+        //}
+
+        // Center frequency changed
+        //private void CenterFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (!double.TryParse(CenterFrequencyTextBox.Text, out double centerFrequency)) return;
+
+        //    if (CenterOffsetMode.IsChecked != true) return;
+
+        //    // Use a timer similar to primary frequency
+        //    if (_centerFrequencyUpdateTimer == null)
+        //    {
+        //        _centerFrequencyUpdateTimer = new DispatcherTimer
+        //        {
+        //            Interval = TimeSpan.FromMilliseconds(500)
+        //        };
+        //        _centerFrequencyUpdateTimer.Tick += (s, args) =>
+        //        {
+        //            _centerFrequencyUpdateTimer.Stop();
+        //            UpdateFrequenciesFromCenterOffset();
+        //        };
+        //    }
+
+        //    _centerFrequencyUpdateTimer.Stop();
+        //    _centerFrequencyUpdateTimer.Start();
+        //}
+
+        // Offset frequency changed
+        //private void OffsetFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (!double.TryParse(OffsetFrequencyTextBox.Text, out double offsetFrequency)) return;
+
+        //    if (CenterOffsetMode.IsChecked != true) return;
+
+        //    // Use a timer similar to primary frequency
+        //    if (_offsetFrequencyUpdateTimer == null)
+        //    {
+        //        _offsetFrequencyUpdateTimer = new DispatcherTimer
+        //        {
+        //            Interval = TimeSpan.FromMilliseconds(500)
+        //        };
+        //        _offsetFrequencyUpdateTimer.Tick += (s, args) =>
+        //        {
+        //            _offsetFrequencyUpdateTimer.Stop();
+        //            UpdateFrequenciesFromCenterOffset();
+        //        };
+        //    }
+
+        //    _offsetFrequencyUpdateTimer.Stop();
+        //    _offsetFrequencyUpdateTimer.Start();
+        //}
+
+        // Unit combobox selection changed
+        //private void CenterFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (CenterOffsetMode.IsChecked != true) return;
+
+        //    if (double.TryParse(CenterFrequencyTextBox.Text, out _))
+        //    {
+        //        UpdateFrequenciesFromCenterOffset();
+        //    }
+        //}
+
+
+
+        //private void SecondaryFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (!isConnected) return;
+        //    if (DirectFrequencyMode.IsChecked != true) return;
+
+        //    if (double.TryParse(SecondaryFrequencyTextBox.Text, out _))
+        //    {
+        //        ApplyDualToneParameters();
+        //    }
+        //}
 
         // Calculate center and offset from F1 and F2
-        private void UpdateCenterOffsetFromFrequencies()
-        {
-            try
-            {
-                // Get current F1 (primary) and F2 (secondary) in Hz
-                double f1Hz = 0, f2Hz = 0;
+        //private void UpdateCenterOffsetFromFrequencies()
+        //{
+        //    try
+        //    {
+        //        // Get current F1 (primary) and F2 (secondary) in Hz
+        //        double f1Hz = 0, f2Hz = 0;
 
-                if (double.TryParse(ChannelFrequencyTextBox.Text, out double f1))
-                {
-                    string f1Unit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-                    f1Hz = f1 * UnitConversionUtility.GetFrequencyMultiplier(f1Unit);
-                }
+        //        if (double.TryParse(ChannelFrequencyTextBox.Text, out double f1))
+        //        {
+        //            string f1Unit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
+        //            f1Hz = f1 * UnitConversionUtility.GetFrequencyMultiplier(f1Unit);
+        //        }
 
-                if (double.TryParse(SecondaryFrequencyTextBox.Text, out double f2))
-                {
-                    string f2Unit = UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox);
-                    f2Hz = f2 * UnitConversionUtility.GetFrequencyMultiplier(f2Unit);
-                }
+        //        if (double.TryParse(SecondaryFrequencyTextBox.Text, out double f2))
+        //        {
+        //            string f2Unit = UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox);
+        //            f2Hz = f2 * UnitConversionUtility.GetFrequencyMultiplier(f2Unit);
+        //        }
 
-                // Calculate center frequency (F1 + F2)/2
-                double centerFreqHz = (f1Hz + f2Hz) / 2.0;
+        //        // Calculate center frequency (F1 + F2)/2
+        //        double centerFreqHz = (f1Hz + f2Hz) / 2.0;
 
-                // Calculate offset frequency F2 - F1
-                double offsetFreqHz = f2Hz - f1Hz;
+        //        // Calculate offset frequency F2 - F1
+        //        double offsetFreqHz = f2Hz - f1Hz;
 
-                // Update UI with calculated values
-                string centerUnit = UnitConversionUtility.GetFrequencyUnit(CenterFrequencyUnitComboBox);
-                double displayCenterFreq = UnitConversionUtility.ConvertFromMicroHz(centerFreqHz * 1e6, centerUnit);
-                CenterFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayCenterFreq);
+        //        // Update UI with calculated values
+        //        string centerUnit = UnitConversionUtility.GetFrequencyUnit(CenterFrequencyUnitComboBox);
+        //        double displayCenterFreq = UnitConversionUtility.ConvertFromMicroHz(centerFreqHz * 1e6, centerUnit);
+        //        CenterFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayCenterFreq);
 
-                string offsetUnit = UnitConversionUtility.GetFrequencyUnit(OffsetFrequencyUnitComboBox);
-                double displayOffsetFreq = UnitConversionUtility.ConvertFromMicroHz(offsetFreqHz * 1e6, offsetUnit);
-                OffsetFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayOffsetFreq, 1);
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating center/offset values: {ex.Message}");
-            }
-        }
+        //        string offsetUnit = UnitConversionUtility.GetFrequencyUnit(OffsetFrequencyUnitComboBox);
+        //        double displayOffsetFreq = UnitConversionUtility.ConvertFromMicroHz(offsetFreqHz * 1e6, offsetUnit);
+        //        OffsetFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayOffsetFreq, 1);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error updating center/offset values: {ex.Message}");
+        //    }
+        //}
 
-        // Calculate F1 and F2 from center and offset
-        private void UpdateFrequenciesFromCenterOffset()
-        {
-            try
-            {
-                // Get current center and offset frequencies in Hz
-                double centerFreqHz = 0, offsetFreqHz = 0;
+        //// Calculate F1 and F2 from center and offset
+        //private void UpdateFrequenciesFromCenterOffset()
+        //{
+        //    try
+        //    {
+        //        // Get current center and offset frequencies in Hz
+        //        double centerFreqHz = 0, offsetFreqHz = 0;
 
-                if (double.TryParse(CenterFrequencyTextBox.Text, out double center))
-                {
-                    string centerUnit = UnitConversionUtility.GetFrequencyUnit(CenterFrequencyUnitComboBox);
-                    centerFreqHz = center * UnitConversionUtility.GetFrequencyMultiplier(centerUnit);
-                }
+        //        if (double.TryParse(CenterFrequencyTextBox.Text, out double center))
+        //        {
+        //            string centerUnit = UnitConversionUtility.GetFrequencyUnit(CenterFrequencyUnitComboBox);
+        //            centerFreqHz = center * UnitConversionUtility.GetFrequencyMultiplier(centerUnit);
+        //        }
 
-                if (double.TryParse(OffsetFrequencyTextBox.Text, out double offset))
-                {
-                    string offsetUnit = UnitConversionUtility.GetFrequencyUnit(OffsetFrequencyUnitComboBox);
-                    offsetFreqHz = offset * UnitConversionUtility.GetFrequencyMultiplier(offsetUnit);
-                }
+        //        if (double.TryParse(OffsetFrequencyTextBox.Text, out double offset))
+        //        {
+        //            string offsetUnit = UnitConversionUtility.GetFrequencyUnit(OffsetFrequencyUnitComboBox);
+        //            offsetFreqHz = offset * UnitConversionUtility.GetFrequencyMultiplier(offsetUnit);
+        //        }
 
-                // Calculate F1 and F2
-                // Center = (F1 + F2)/2 => F1 + F2 = 2 * Center
-                // Offset = F2 - F1
-                // Solving: F1 = Center - Offset/2, F2 = Center + Offset/2
-                double f1Hz = centerFreqHz - (offsetFreqHz / 2.0);
-                double f2Hz = centerFreqHz + (offsetFreqHz / 2.0);
+        //        // Calculate F1 and F2
+        //        // Center = (F1 + F2)/2 => F1 + F2 = 2 * Center
+        //        // Offset = F2 - F1
+        //        // Solving: F1 = Center - Offset/2, F2 = Center + Offset/2
+        //        double f1Hz = centerFreqHz - (offsetFreqHz / 2.0);
+        //        double f2Hz = centerFreqHz + (offsetFreqHz / 2.0);
 
-                // Update the calculated values display
-                CalculatedF1Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f1Hz)} Hz";
-                CalculatedF2Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f2Hz)} Hz";
+        //        // Update the calculated values display
+        //        CalculatedF1Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f1Hz)} Hz";
+        //        CalculatedF2Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f2Hz)} Hz";
 
-                // Apply to device with f1Hz and f2Hz
-                ApplyDualToneWithFrequencies(f1Hz, f2Hz);
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating frequencies from center/offset: {ex.Message}");
-            }
-        }
+        //        // Apply to device with f1Hz and f2Hz
+        //        ApplyDualToneWithFrequencies(f1Hz, f2Hz);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error updating frequencies from center/offset: {ex.Message}");
+        //    }
+        //}
 
         // Apply dual tone with specific frequencies
-        private void ApplyDualToneWithFrequencies(double f1Hz, double f2Hz)
-        {
-            try
-            {
-                // Get amplitude, offset, phase
-                if (!double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) ||
-                    !double.TryParse(ChannelOffsetTextBox.Text, out double offset) ||
-                    !double.TryParse(ChannelPhaseTextBox.Text, out double phase))
-                    return;
+        //private void ApplyDualToneWithFrequencies(double f1Hz, double f2Hz)
+        //{
+        //    try
+        //    {
+        //        // Get amplitude, offset, phase
+        //        if (!double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) ||
+        //            !double.TryParse(ChannelOffsetTextBox.Text, out double offset) ||
+        //            !double.TryParse(ChannelPhaseTextBox.Text, out double phase))
+        //            return;
 
-                string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
-                double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                double actualAmplitude = amplitude * ampMultiplier;
+        //        string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
+        //        double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
+        //        double actualAmplitude = amplitude * ampMultiplier;
 
-                // Log the parameters we're about to apply
-                LogMessage($"Applying dual tone with: Freq1={f1Hz}Hz, Freq2={f2Hz}Hz, " +
-                          $"Amp={actualAmplitude}Vpp, Offset={offset}V, Phase={phase}°");
+        //        // Log the parameters we're about to apply
+        //        LogMessage($"Applying dual tone with: Freq1={f1Hz}Hz, Freq2={f2Hz}Hz, " +
+        //                  $"Amp={actualAmplitude}Vpp, Offset={offset}V, Phase={phase}°");
 
-                // Create parameters dictionary for our improved implementation
-                Dictionary<string, object> parameters = new Dictionary<string, object>
-        {
-            { "Frequency", f1Hz },
-            { "Frequency2", f2Hz },
-            { "Amplitude", actualAmplitude },
-            { "Offset", offset },
-            { "Phase", phase }
-        };
+        //        // Create parameters dictionary for our improved implementation
+        //        Dictionary<string, object> parameters = new Dictionary<string, object>
+        //{
+        //    { "Frequency", f1Hz },
+        //    { "Frequency2", f2Hz },
+        //    { "Amplitude", actualAmplitude },
+        //    { "Offset", offset },
+        //    { "Phase", phase }
+        //};
 
-                // Apply the dual tone waveform using our improved method
-                rigolDG2072.ApplyDualToneWaveform(activeChannel, parameters);
+        //        // Apply the dual tone waveform using our improved method
+        //        rigolDG2072.ApplyDualToneWaveform(activeChannel, parameters);
 
-                LogMessage($"Applied Dual Tone waveform to CH{activeChannel} with F1={f1Hz}Hz, F2={f2Hz}Hz, " +
-                         $"Center={(f1Hz + f2Hz) / 2}Hz, Offset={f2Hz - f1Hz}Hz, " +
-                         $"Amp={amplitude} {ampUnit}, Offset={offset}V, Phase={phase}°");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying dual tone with frequencies: {ex.Message}");
-            }
-        }
+        //        LogMessage($"Applied Dual Tone waveform to CH{activeChannel} with F1={f1Hz}Hz, F2={f2Hz}Hz, " +
+        //                 $"Center={(f1Hz + f2Hz) / 2}Hz, Offset={f2Hz - f1Hz}Hz, " +
+        //                 $"Amp={amplitude} {ampUnit}, Offset={offset}V, Phase={phase}°");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error applying dual tone with frequencies: {ex.Message}");
+        //    }
+        //}
 
         // Add these timer fields near your other timer declarations
-        private DispatcherTimer _centerFrequencyUpdateTimer;
-        private DispatcherTimer _offsetFrequencyUpdateTimer;
+        //private DispatcherTimer _centerFrequencyUpdateTimer;
+        //private DispatcherTimer _offsetFrequencyUpdateTimer;
 
 
         #endregion
@@ -2976,94 +3154,104 @@ namespace DG2072_USB_Control
             }
         }
 
-        private void RefreshDualToneSettings(int channel)
-        {
-            try
-            {
-                // Get all dual tone parameters
-                var parameters = rigolDG2072.GetAllDualToneParameters(channel);
 
-                Dispatcher.Invoke(() =>
-                {
-                    // Update primary frequency (from main controls)
-                    if (parameters.TryGetValue("Frequency1", out double freq1))
-                    {
-                        // Update using the existing UpdateFrequencyValue method
-                        double displayValue = UnitConversionUtility.ConvertFromMicroHz(
-                            freq1 * 1e6,
-                            UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox)
-                        );
-                        ChannelFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-                    }
+        //private void RefreshDualToneSettings(int channel)
+        //{
+        //    if (dualToneGen != null)
+        //    {
+        //        dualToneGen.ActiveChannel = channel;
+        //        dualToneGen.RefreshDualToneSettings();
+        //    }
+        //}
 
-                    // Update secondary frequency
-                    if (parameters.TryGetValue("Frequency2", out double freq2) &&
-                        SecondaryFrequencyTextBox != null)
-                    {
-                        string unit = UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox);
-                        double displayValue = UnitConversionUtility.ConvertFromMicroHz(freq2 * 1e6, unit);
-                        SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
+        //private void RefreshDualToneSettings(int channel)
+        //{
+        //    try
+        //    {
+        //        // Get all dual tone parameters
+        //        var parameters = rigolDG2072.GetAllDualToneParameters(channel);
 
-                        // Update frequency ratio if needed
-                        if (freq1 > 0)
-                        {
-                            frequencyRatio = freq2 / freq1;
-                            // Find and select closest ratio in combo box
-                            UpdateFrequencyRatioComboBox(frequencyRatio);
-                        }
-                    }
+        //        Dispatcher.Invoke(() =>
+        //        {
+        //            // Update primary frequency (from main controls)
+        //            if (parameters.TryGetValue("Frequency1", out double freq1))
+        //            {
+        //                // Update using the existing UpdateFrequencyValue method
+        //                double displayValue = UnitConversionUtility.ConvertFromMicroHz(
+        //                    freq1 * 1e6,
+        //                    UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox)
+        //                );
+        //                ChannelFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
+        //            }
 
-                    // Update center and offset for center/offset mode
-                    if (parameters.TryGetValue("CenterFrequency", out double center) &&
-                        CenterFrequencyTextBox != null)
-                    {
-                        string unit = UnitConversionUtility.GetFrequencyUnit(CenterFrequencyUnitComboBox);
-                        double displayValue = UnitConversionUtility.ConvertFromMicroHz(center * 1e6, unit);
-                        CenterFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-                    }
+        //            // Update secondary frequency
+        //            if (parameters.TryGetValue("Frequency2", out double freq2) &&
+        //                SecondaryFrequencyTextBox != null)
+        //            {
+        //                string unit = UnitConversionUtility.GetFrequencyUnit(SecondaryFrequencyUnitComboBox);
+        //                double displayValue = UnitConversionUtility.ConvertFromMicroHz(freq2 * 1e6, unit);
+        //                SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
 
-                    if (parameters.TryGetValue("OffsetFrequency", out double offset) &&
-                        OffsetFrequencyTextBox != null)
-                    {
-                        string unit = UnitConversionUtility.GetFrequencyUnit(OffsetFrequencyUnitComboBox);
-                        double displayValue = UnitConversionUtility.ConvertFromMicroHz(offset * 1e6, unit);
-                        OffsetFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error refreshing dual tone settings: {ex.Message}");
-            }
-        }
+        //                // Update frequency ratio if needed
+        //                if (freq1 > 0)
+        //                {
+        //                    frequencyRatio = freq2 / freq1;
+        //                    // Find and select closest ratio in combo box
+        //                    UpdateFrequencyRatioComboBox(frequencyRatio);
+        //                }
+        //            }
 
-        private void UpdateFrequencyRatioComboBox(double ratio)
-        {
-            // Find the closest matching ratio in the combo box
-            if (FrequencyRatioComboBox != null)
-            {
-                double closestDiff = double.MaxValue;
-                int closestIndex = 0;
+        //            // Update center and offset for center/offset mode
+        //            if (parameters.TryGetValue("CenterFrequency", out double center) &&
+        //                CenterFrequencyTextBox != null)
+        //            {
+        //                string unit = UnitConversionUtility.GetFrequencyUnit(CenterFrequencyUnitComboBox);
+        //                double displayValue = UnitConversionUtility.ConvertFromMicroHz(center * 1e6, unit);
+        //                CenterFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
+        //            }
 
-                // Loop through all items and find the closest match
-                for (int i = 0; i < FrequencyRatioComboBox.Items.Count; i++)
-                {
-                    var item = FrequencyRatioComboBox.Items[i] as ComboBoxItem;
-                    if (item != null && double.TryParse(item.Content.ToString(), out double itemRatio))
-                    {
-                        double diff = Math.Abs(itemRatio - ratio);
-                        if (diff < closestDiff)
-                        {
-                            closestDiff = diff;
-                            closestIndex = i;
-                        }
-                    }
-                }
+        //            if (parameters.TryGetValue("OffsetFrequency", out double offset) &&
+        //                OffsetFrequencyTextBox != null)
+        //            {
+        //                string unit = UnitConversionUtility.GetFrequencyUnit(OffsetFrequencyUnitComboBox);
+        //                double displayValue = UnitConversionUtility.ConvertFromMicroHz(offset * 1e6, unit);
+        //                OffsetFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogMessage($"Error refreshing dual tone settings: {ex.Message}");
+        //    }
+        //}
 
-                // Set the selected item to the closest match
-                FrequencyRatioComboBox.SelectedIndex = closestIndex;
-            }
-        }
+        //private void UpdateFrequencyRatioComboBox(double ratio)
+        //{
+        //    // Find the closest matching ratio in the combo box
+        //    if (FrequencyRatioComboBox != null)
+        //    {
+        //        double closestDiff = double.MaxValue;
+        //        int closestIndex = 0;
+
+        //        // Loop through all items and find the closest match
+        //        for (int i = 0; i < FrequencyRatioComboBox.Items.Count; i++)
+        //        {
+        //            var item = FrequencyRatioComboBox.Items[i] as ComboBoxItem;
+        //            if (item != null && double.TryParse(item.Content.ToString(), out double itemRatio))
+        //            {
+        //                double diff = Math.Abs(itemRatio - ratio);
+        //                if (diff < closestDiff)
+        //                {
+        //                    closestDiff = diff;
+        //                    closestIndex = i;
+        //                }
+        //            }
+        //        }
+
+        //        // Set the selected item to the closest match
+        //        FrequencyRatioComboBox.SelectedIndex = closestIndex;
+        //    }
+        //}
 
         private void RefreshArbitraryWaveformSettings(int channel)
         {
