@@ -12,8 +12,10 @@ using DG2072_USB_Control.Services;
 using System.Windows.Media;
 using System.Collections.Generic;
 using static DG2072_USB_Control.RigolDG2072;
-using DG2072_USB_Control.Continuous.Harmonics;
 using System.Threading.Channels;
+
+using DG2072_USB_Control.Continuous.Harmonics;
+using DG2072_USB_Control.Continuous.PulseGenerator;
 
 
 namespace DG2072_USB_Control
@@ -68,6 +70,9 @@ namespace DG2072_USB_Control
         private HarmonicsManager _harmonicsManager;
         private HarmonicsUIController _harmonicsUIController;
 
+        // pulse generator management
+        private PulseGen pulseGenerator;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -87,6 +92,7 @@ namespace DG2072_USB_Control
 
         #region Channel Toggle Methods
 
+        // Update the channel toggle method to update the pulse generator's active channel
         private void ChannelToggleButton_Click(object sender, RoutedEventArgs e)
         {
             // Toggle between Channel 1 and Channel 2
@@ -97,12 +103,12 @@ namespace DG2072_USB_Control
                 ChannelToggleButton.Content = "Channel 1";
                 ActiveChannelTextBlock.Text = "Channel 1";
                 ChannelControlsGroupBox.Header = "Channel 1 Controls";
-                // Update harmonics controller with the new active channel
-                //harmonicController = new ChannelHarmonicController(rigolDG2072, activeChannel);
-                
-                // Update harmonics manager with new active channel
-                if (_harmonicsManager != null)
-                    _harmonicsManager.SetActiveChannel(activeChannel);
+
+                // Update pulse generator with the new active channel
+                if (pulseGenerator != null)
+                    pulseGenerator.ActiveChannel = activeChannel;
+
+                // Other component updates...
             }
             else
             {
@@ -111,15 +117,13 @@ namespace DG2072_USB_Control
                 ChannelToggleButton.Content = "Channel 2";
                 ActiveChannelTextBlock.Text = "Channel 2";
                 ChannelControlsGroupBox.Header = "Channel 2 Controls";
-                // Update harmonics controller with the new active channel
-                //harmonicController = new ChannelHarmonicController(rigolDG2072, activeChannel);
-                
-                // Update harmonics manager with new active channel
-                if (_harmonicsManager != null)
-                    _harmonicsManager.SetActiveChannel(activeChannel);
+
+                // Update pulse generator with the new active channel
+                if (pulseGenerator != null)
+                    pulseGenerator.ActiveChannel = activeChannel;
+
+                // Other component updates...
             }
-
-
 
             // Refresh the UI to show current settings for the selected channel
             if (isConnected)
@@ -128,62 +132,8 @@ namespace DG2072_USB_Control
             }
         }
 
-        private void ChannelPulseWidthTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (double.TryParse(PulseWidth.Text, out _))
-            {
-                AdjustPulseTimeAndUnit(PulseWidth, PulseWidthUnitComboBox);
-            }
-        }
 
-        private void ChannelPulsePeriodTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (double.TryParse(PulsePeriod.Text, out _))
-            {
-                AdjustPulseTimeAndUnit(PulsePeriod, PulsePeriodUnitComboBox);
-            }
-        }
 
-        private void ChannelPulseRiseTimeTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (double.TryParse(PulseRiseTime.Text, out _))
-            {
-                AdjustPulseTimeAndUnit(PulseRiseTime, PulseRiseTimeUnitComboBox);
-            }
-        }
-
-        private void ChannelPulseFallTimeTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (double.TryParse(PulseFallTime.Text, out _))
-            {
-                AdjustPulseTimeAndUnit(PulseFallTime, PulseFallTimeUnitComboBox);
-            }
-        }
-
-        private void ChannelPulseFallTimeTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (!double.TryParse(PulseFallTime.Text, out double fallTime)) return;
-
-            if (_pulseFallTimeUpdateTimer == null)
-            {
-                _pulseFallTimeUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _pulseFallTimeUpdateTimer.Tick += (s, args) =>
-                {
-                    _pulseFallTimeUpdateTimer.Stop();
-                    if (double.TryParse(PulseFallTime.Text, out double ft))
-                    {
-                        ApplyPulseFallTime(ft);
-                    }
-                };
-            }
-
-            _pulseFallTimeUpdateTimer.Stop();
-            _pulseFallTimeUpdateTimer.Start();
-        }
 
         private void RefreshChannelSettings()
         {
@@ -292,9 +242,34 @@ namespace DG2072_USB_Control
                     // Update output state
                     UpdateOutputState(ChannelOutputToggle, activeChannel);
                 }
+                // Special handling for PULSE waveform - delegate to pulseGenerator
+                else if (waveform == "PULSE" && pulseGenerator != null)
+                {
+                    // Update common parameters
+                    if (_frequencyModeActive)
+                    {
+                        UpdateFrequencyValue(ChannelFrequencyTextBox, ChannelFrequencyUnitComboBox, activeChannel);
+                    }
+                    else
+                    {
+                        UpdatePeriodValue(PulsePeriod, PulsePeriodUnitComboBox, activeChannel);
+                    }
+
+                    // Update amplitude, offset, phase and output state
+                    UpdateAmplitudeValue(ChannelAmplitudeTextBox, ChannelAmplitudeUnitComboBox, activeChannel);
+                    UpdateOffsetValue(ChannelOffsetTextBox, activeChannel);
+                    UpdatePhaseValue(ChannelPhaseTextBox, activeChannel);
+                    UpdateOutputState(ChannelOutputToggle, activeChannel);
+
+                    // Delegate pulse-specific parameter updates to the pulse generator
+                    pulseGenerator.UpdatePulseParameters(activeChannel);
+
+                    // Ensure pulse-specific controls are visible
+                    pulseGenerator.UpdatePulseControls(true);
+                }
                 else
                 {
-                    // Handle non-DC waveforms
+                    // Handle other non-DC waveforms
 
                     // Update frequency/period based on current mode
                     if (_frequencyModeActive)
@@ -321,12 +296,22 @@ namespace DG2072_USB_Control
                     {
                         UpdateDutyCycleValue(DutyCycle, activeChannel);
                     }
-                    else if (waveform == "PULSE")
+                    else if (waveform == "HARMONIC" && _harmonicsUIController != null)
                     {
-                        // Update pulse-specific parameters
-                        UpdatePulseParameters(activeChannel);
+                        _harmonicsUIController.RefreshHarmonicSettings();
+                    }
+                    else if (waveform == "DUAL TONE")
+                    {
+                        RefreshDualToneSettings(activeChannel);
+                    }
+                    else if (waveform == "USER")
+                    {
+                        RefreshArbitraryWaveformSettings(activeChannel);
                     }
                 }
+
+                // Update UI controls visibility based on the selected waveform
+                UpdateWaveformSpecificControls(waveform);
 
                 LogMessage($"Refreshed Channel {activeChannel} settings");
             }
@@ -335,7 +320,6 @@ namespace DG2072_USB_Control
                 LogMessage($"Error refreshing Channel {activeChannel} settings: {ex.Message}");
             }
         }
-
         private void UpdateDutyCycleValue(TextBox dutyCycleTextBox, int channel)
         {
             try
@@ -945,7 +929,7 @@ namespace DG2072_USB_Control
 
             // Since PulsePeriod is now inside FrequencyDockPanel, we set this to FrequencyDockPanel
             // This maintains compatibility with existing code that references PulsePeriodDockPanel
-            PulsePeriodDockPanel = FindVisualParent<DockPanel>(ChannelFrequencyTextBox);
+            PulsePeriodDockPanel = FindVisualParent<DockPanel>(PulsePeriod);
 
             PulseRiseTimeDockPanel = FindVisualParent<DockPanel>(PulseRiseTime);
             PulseFallTimeDockPanel = FindVisualParent<DockPanel>(PulseFallTime);
@@ -953,7 +937,7 @@ namespace DG2072_USB_Control
             // Get references to the main frequency panel and calculated rate panel
             FrequencyDockPanel = FindVisualParent<DockPanel>(ChannelFrequencyTextBox);
 
-            // New: Find and store reference to phase panel
+            // Find and store reference to phase panel
             PhaseDockPanel = FindVisualParent<DockPanel>(ChannelPhaseTextBox);
 
             // Initialize arbitrary waveform controls
@@ -963,6 +947,12 @@ namespace DG2072_USB_Control
             _frequencyModeActive = true;
             FrequencyPeriodModeToggle.IsChecked = true;
             FrequencyPeriodModeToggle.Content = "To Period";
+
+            // Initialize the pulse generator after UI references are set up
+            pulseGenerator = new PulseGen(rigolDG2072, activeChannel, this);
+            pulseGenerator.LogEvent += (s, message) => LogMessage(message);
+
+
 
             // After window initialization, use a small delay before auto-connecting
             // This gives the UI time to fully render before connecting
@@ -1001,6 +991,9 @@ namespace DG2072_USB_Control
                 }
             };
 
+
+
+
             // In Window_Loaded method, add this to find and store the DC panel
             DCVoltageDockPanel = FindVisualParent<DockPanel>(DCVoltageTextBox);
             // Initialize harmonics management
@@ -1011,25 +1004,13 @@ namespace DG2072_USB_Control
             _harmonicsUIController = new HarmonicsUIController(_harmonicsManager, this);
             _harmonicsUIController.LogEvent += (s, message) => LogMessage(message);
 
+
+
+
             startupTimer.Start();
         }
 
 
-
-        /// <summary>
-        /// Event handler for the pulse rate mode toggle button
-        /// <summary>
-        private void PulseRateModeToggle_Click(object sender, RoutedEventArgs e)
-        {
-            _frequencyModeActive = PulseRateModeToggle.IsChecked == true;
-            PulseRateModeToggle.Content = _frequencyModeActive ? "To Period" : "To Frequency";
-
-            // Update the UI based on the selected mode
-            UpdatePulseRateMode();
-
-            // Recalculate and update the displayed values
-            UpdateCalculatedRateValue();
-        }
 
         // Rename the event handler to reflect its more general purpose
         private void FrequencyPeriodModeToggle_Click(object sender, RoutedEventArgs e)
@@ -1045,27 +1026,7 @@ namespace DG2072_USB_Control
         }
 
 
-        /// <summary>
-        /// Updates UI elements based on the selected pulse rate mode (frequency or period)
-        /// </summary>
-        private void UpdatePulseRateMode()
-        {
-            if (!isConnected) return;
 
-            // Toggle visibility of panels based on selected mode
-            if (_frequencyModeActive)
-            {
-                // In Frequency mode, show frequency controls, hide period controls
-                FrequencyDockPanel.Visibility = Visibility.Visible;
-                PeriodDockPanel.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                // In Period mode, show period controls, hide frequency controls
-                FrequencyDockPanel.Visibility = Visibility.Collapsed;
-                PeriodDockPanel.Visibility = Visibility.Visible;
-            }
-        }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -1829,34 +1790,7 @@ namespace DG2072_USB_Control
 
         }
 
-        private void ChannelPulsePeriodTextBox_TextChanged(object sender, TextChangedEventArgs e)
 
-        {
-            if (!isConnected) return;
-            if (!double.TryParse(PulsePeriod.Text, out double period)) return;
-
-            if (_pulsePeriodUpdateTimer == null)
-            {
-                _pulsePeriodUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _pulsePeriodUpdateTimer.Tick += (s, args) =>
-                {
-                    _pulsePeriodUpdateTimer.Stop();
-                    if (double.TryParse(PulsePeriod.Text, out double p))
-                    {
-                        ApplyPulsePeriod(p);
-                        // Add this line to update the frequency when period changes
-                        if (!_frequencyModeActive)
-                            UpdateCalculatedRateValue();
-                    }
-                };
-            }
-
-            _pulsePeriodUpdateTimer.Stop();
-            _pulsePeriodUpdateTimer.Start();
-        }
 
         private void ChannelAmplitudeTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -1968,117 +1902,105 @@ namespace DG2072_USB_Control
             }
         }
 
+        // 6. Call pulse generator's methods from ChannelApplyButton_Click when needed
         private void ChannelApplyButton_Click(object sender, RoutedEventArgs e)
         {
             if (!isConnected) return;
 
             try
             {
-                // First adjust the values and units for better display
-                if (_frequencyModeActive)
-                {
-                    AdjustFrequencyAndUnit(ChannelFrequencyTextBox, ChannelFrequencyUnitComboBox);
-                }
-                else
-                {
-                    AdjustPulseTimeAndUnit(PulsePeriod, PulsePeriodUnitComboBox);
-                }
-
-                AdjustAmplitudeAndUnit(ChannelAmplitudeTextBox, ChannelAmplitudeUnitComboBox);
-
                 // Get current waveform type
                 string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
 
-                // For pulse waveform parameters, adjust if needed
-                if (waveform == "PULSE")
+                // CASE 1: PULSE WAVEFORM - Use the dedicated PulseGen class
+                if (waveform == "PULSE" && pulseGenerator != null)
                 {
-                    AdjustPulseTimeAndUnit(PulseWidth, PulseWidthUnitComboBox);
-                    AdjustPulseTimeAndUnit(PulseRiseTime, PulseRiseTimeUnitComboBox);
-                    AdjustPulseTimeAndUnit(PulseFallTime, PulseFallTimeUnitComboBox);
+                    // The pulseGenerator will handle all pulse-specific parameters and validations
+                    pulseGenerator.ApplyPulseParameters();
                 }
-
-                // Apply based on mode
-                if (_frequencyModeActive)
-                {
-                    // Check if frequency value is valid
-                    if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
-                    {
-                        LogMessage($"Invalid frequency value for CH{activeChannel}");
-                        return;
-                    }
-
-                    // Convert frequency unit
-                    string freqUnit = Services.UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-                    double freqMultiplier = Services.UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-                    double actualFrequency = frequency * freqMultiplier;
-
-                    if (waveform == "PULSE")
-                    {
-                        // For pulse, use special handling
-                        rigolDG2072.SetFrequency(activeChannel, actualFrequency);
-                        ApplyPulseParameters();
-                    }
-                    else
-                    {
-                        // For other waveforms, apply directly with frequency
-                        rigolDG2072.SetFrequency(activeChannel, actualFrequency);
-                    }
-                }
+                // CASE 2: ALL OTHER WAVEFORMS - Handle normally
                 else
                 {
-                    // Check if period value is valid
-                    if (!double.TryParse(PulsePeriod.Text, out double period))
+                    // First adjust the values and units for better display
+                    if (_frequencyModeActive)
                     {
-                        LogMessage($"Invalid period value for CH{activeChannel}");
-                        return;
-                    }
-
-                    // Convert period unit
-                    string periodUnit = Services.UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-                    double periodMultiplier = Services.UnitConversionUtility.GetPeriodMultiplier(periodUnit);
-                    double actualPeriod = period * periodMultiplier;
-
-                    if (waveform == "PULSE")
-                    {
-                        // For pulse, use special handling
-                        rigolDG2072.SetPulsePeriod(activeChannel, actualPeriod);
-                        ApplyPulseParameters();
+                        AdjustFrequencyAndUnit(ChannelFrequencyTextBox, ChannelFrequencyUnitComboBox);
                     }
                     else
                     {
-                        // For other waveforms, apply directly with period
+                        // For period mode, use PulseGen's adjustment method if available
+                        if (pulseGenerator != null)
+                        {
+                            pulseGenerator.AdjustPulseTimeAndUnit(PulsePeriod, PulsePeriodUnitComboBox);
+                        }
+                    }
+
+                    AdjustAmplitudeAndUnit(ChannelAmplitudeTextBox, ChannelAmplitudeUnitComboBox);
+
+                    // Apply based on mode
+                    if (_frequencyModeActive)
+                    {
+                        // Check if frequency value is valid
+                        if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
+                        {
+                            LogMessage($"Invalid frequency value for CH{activeChannel}");
+                            return;
+                        }
+
+                        // Convert frequency unit
+                        string freqUnit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
+                        double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
+                        double actualFrequency = frequency * freqMultiplier;
+
+                        rigolDG2072.SetFrequency(activeChannel, actualFrequency);
+                    }
+                    else
+                    {
+                        // Check if period value is valid
+                        if (!double.TryParse(PulsePeriod.Text, out double period))
+                        {
+                            LogMessage($"Invalid period value for CH{activeChannel}");
+                            return;
+                        }
+
+                        // Convert period unit
+                        string periodUnit = UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
+                        double periodMultiplier = UnitConversionUtility.GetPeriodMultiplier(periodUnit);
+                        double actualPeriod = period * periodMultiplier;
+
                         rigolDG2072.SendCommand($"SOURCE{activeChannel}:PERiod {actualPeriod}");
                     }
-                }
 
-                // Apply other parameters (amplitude, offset, phase)
-                if (double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) &&
-                    double.TryParse(ChannelOffsetTextBox.Text, out double offset) &&
-                    double.TryParse(ChannelPhaseTextBox.Text, out double phase))
-                {
-                    string ampUnit = Services.UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
-                    double ampMultiplier = Services.UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                    double actualAmplitude = amplitude * ampMultiplier;
+                    // Apply other parameters (amplitude, offset, phase)
+                    if (double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) &&
+                        double.TryParse(ChannelOffsetTextBox.Text, out double offset) &&
+                        double.TryParse(ChannelPhaseTextBox.Text, out double phase))
+                    {
+                        string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
+                        double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
+                        double actualAmplitude = amplitude * ampMultiplier;
 
-                    rigolDG2072.SetAmplitude(activeChannel, actualAmplitude);
-                    rigolDG2072.SetOffset(activeChannel, offset);
-                    rigolDG2072.SetPhase(activeChannel, phase);
-                }
+                        rigolDG2072.SetAmplitude(activeChannel, actualAmplitude);
+                        rigolDG2072.SetOffset(activeChannel, offset);
+                        rigolDG2072.SetPhase(activeChannel, phase);
+                    }
 
-                // Apply waveform-specific parameters
-                if (waveform == "RAMP" && double.TryParse(Symm.Text, out double symmetry))
-                {
-                    rigolDG2072.SetSymmetry(activeChannel, symmetry);
-                    LogMessage($"Applied symmetry {symmetry}% to CH{activeChannel}");
-                }
-                else if (waveform == "SQUARE" && double.TryParse(DutyCycle.Text, out double dutyCycle))
-                {
-                    rigolDG2072.SetDutyCycle(activeChannel, dutyCycle);
-                    LogMessage($"Applied duty cycle {dutyCycle}% to CH{activeChannel}");
+                    // Apply waveform-specific parameters
+                    if (waveform == "RAMP" && double.TryParse(Symm.Text, out double symmetry))
+                    {
+                        rigolDG2072.SetSymmetry(activeChannel, symmetry);
+                        LogMessage($"Applied symmetry {symmetry}% to CH{activeChannel}");
+                    }
+                    else if (waveform == "SQUARE" && double.TryParse(DutyCycle.Text, out double dutyCycle))
+                    {
+                        rigolDG2072.SetDutyCycle(activeChannel, dutyCycle);
+                        LogMessage($"Applied duty cycle {dutyCycle}% to CH{activeChannel}");
+                    }
                 }
 
                 // Refresh the UI to show the actual values from the device
                 RefreshChannelSettings();
+                LogMessage($"Applied settings to CH{activeChannel}");
             }
             catch (Exception ex)
             {
@@ -2092,571 +2014,9 @@ namespace DG2072_USB_Control
         #region Pulse Parameter Handling
 
 
-        private void ChannelPulseWidthTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (!double.TryParse(PulseWidth.Text, out double width)) return;
 
-            if (_pulseWidthUpdateTimer == null)
-            {
-                _pulseWidthUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _pulseWidthUpdateTimer.Tick += (s, args) =>
-                {
-                    _pulseWidthUpdateTimer.Stop();
-                    if (double.TryParse(PulseWidth.Text, out double w))
-                    {
-                        ApplyPulseWidth(w);
-                    }
-                };
-            }
 
-            _pulseWidthUpdateTimer.Stop();
-            _pulseWidthUpdateTimer.Start();
-        }
 
-        private void ChannelPulseRiseTimeTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (!isConnected) return;
-            if (!double.TryParse(PulseRiseTime.Text, out double riseTime)) return;
-
-            if (_pulseRiseTimeUpdateTimer == null)
-            {
-                _pulseRiseTimeUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _pulseRiseTimeUpdateTimer.Tick += (s, args) =>
-                {
-                    _pulseRiseTimeUpdateTimer.Stop();
-                    if (double.TryParse(PulseRiseTime.Text, out double rt))
-                    {
-                        ApplyPulseRiseTime(rt);
-                    }
-                };
-            }
-
-            _pulseRiseTimeUpdateTimer.Stop();
-            _pulseRiseTimeUpdateTimer.Start();
-        }
-
-
-        private void PulseWidthUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!isConnected) return;
-
-            if (double.TryParse(PulseWidth.Text, out double width))
-            {
-                ApplyPulseWidth(width);
-            }
-        }
-
-        private void PulsePeriodUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!isConnected) return;
-
-            if (double.TryParse(PulsePeriod.Text, out double period))
-            {
-                ApplyPulsePeriod(period);
-                // Update the calculated frequency when period unit changes
-                if (!_frequencyModeActive)
-                    UpdateCalculatedRateValue();
-            }
-        }
-
-        private void PulseRiseTimeUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!isConnected) return;
-
-            if (double.TryParse(PulseRiseTime.Text, out double riseTime))
-            {
-                ApplyPulseRiseTime(riseTime);
-            }
-        }
-
-        private void PulseFallTimeUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (!isConnected) return;
-
-            if (double.TryParse(PulseFallTime.Text, out double fallTime))
-            {
-                ApplyPulseFallTime(fallTime);
-            }
-        }
-
-        /// <summary>
-        /// Validates that the pulse width is within the allowed range based on other parameters
-        /// </summary>
-        private void ValidatePulseParameters()
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                // Get current period value
-                double period = 0;
-                if (double.TryParse(PulsePeriod.Text, out double periodValue))
-                {
-                    string periodUnit = Services.UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-                    period = periodValue * Services.UnitConversionUtility.GetPeriodMultiplier(periodUnit);
-                }
-                else
-                {
-                    // If we can't parse the current period, query it from the device
-                    period = rigolDG2072.GetPulsePeriod(activeChannel);
-                }
-
-                // Get current width value
-                double width = 0;
-                if (double.TryParse(PulseWidth.Text, out double widthValue))
-                {
-                    string widthUnit = Services.UnitConversionUtility.GetPeriodUnit(PulseWidthUnitComboBox);
-                    width = widthValue * Services.UnitConversionUtility.GetPeriodMultiplier(widthUnit);
-                }
-                else
-                {
-                    // If we can't parse the current width, query it from the device
-                    width = rigolDG2072.GetPulseWidth(activeChannel);
-                }
-
-                // Get rise and fall times
-                double riseTime = 0;
-                if (double.TryParse(PulseRiseTime.Text, out double riseTimeValue))
-                {
-                    string riseTimeUnit = Services.UnitConversionUtility.GetPeriodUnit(PulseRiseTimeUnitComboBox);
-                    riseTime = riseTimeValue * Services.UnitConversionUtility.GetPeriodMultiplier(riseTimeUnit);
-                }
-                else
-                {
-                    riseTime = rigolDG2072.GetPulseRiseTime(activeChannel);
-                }
-
-                double fallTime = 0;
-                if (double.TryParse(PulseFallTime.Text, out double fallTimeValue))
-                {
-                    string fallTimeUnit = Services.UnitConversionUtility.GetPeriodUnit(PulseFallTimeUnitComboBox);
-                    fallTime = fallTimeValue * Services.UnitConversionUtility.GetPeriodMultiplier(fallTimeUnit);
-                }
-                else
-                {
-                    fallTime = rigolDG2072.GetPulseFallTime(activeChannel);
-                }
-
-                // Apply the DG2072 pulse width constraints
-                // Based on manual: Width + 0.7 × (Rise + Fall) ≤ Period
-                // Leaving 10% margin for safety
-                double maxWidth = period - 0.7 * (riseTime + fallTime);
-                maxWidth *= 0.9; // Add 10% safety margin
-
-                // Ensure width is greater than minimum value (typically around 20ns)
-                double minWidth = 20e-9; // 20ns typical minimum
-
-                // If width is outside the valid range, adjust it
-                if (width > maxWidth)
-                {
-                    width = maxWidth;
-
-                    // Update UI with adjusted width
-                    Dispatcher.Invoke(() =>
-                    {
-                        UpdatePulseWidthInUI(width);
-                    });
-
-                    LogMessage($"Pulse width adjusted to maximum allowed value ({Services.UnitConversionUtility.FormatWithMinimumDecimals(width * 1e6)} µs) based on current period and transition times");
-                }
-                else if (width < minWidth)
-                {
-                    width = minWidth;
-
-                    // Update UI with adjusted width
-                    Dispatcher.Invoke(() =>
-                    {
-                        UpdatePulseWidthInUI(width);
-                    });
-
-                    LogMessage($"Pulse width adjusted to minimum allowed value ({Services.UnitConversionUtility.FormatWithMinimumDecimals(width * 1e9)} ns)");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error validating pulse parameters: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Updates the pulse width display in the UI with the appropriate units
-        /// </summary>
-        private void UpdatePulseWidthInUI(double widthInSeconds)
-        {
-            try
-            {
-                // Convert to picoseconds
-                double psValue = widthInSeconds * 1e12;
-
-                // Get current unit
-                string currentUnit = Services.UnitConversionUtility.GetPeriodUnit(PulseWidthUnitComboBox);
-
-                // Calculate display value
-                double displayValue = Services.UnitConversionUtility.ConvertFromPicoSeconds(psValue, currentUnit);
-
-                // Update textbox
-                PulseWidth.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating pulse width UI: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Applies pulse parameters to the device in the correct order to ensure constraints are met
-        /// </summary>
-        // Method to apply pulse settings based on mode
-        private void ApplyPulseParameters()
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                LogMessage("Applying pulse parameters in sequence...");
-
-                // Handle based on which mode is active
-                if (_frequencyModeActive)
-                {
-                    // In Frequency mode, send frequency directly to the device
-                    if (double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
-                    {
-                        string freqUnit = Services.UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-                        double actualFrequency = frequency * Services.UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-
-                        // Send frequency command directly
-                        rigolDG2072.SetFrequency(activeChannel, actualFrequency);
-                        LogMessage($"Set pulse frequency to {frequency} {freqUnit} ({actualFrequency} Hz)");
-
-                        // Update UI but don't send this to device
-                        double period = 1.0 / actualFrequency;
-                        UpdatePulseTimeValue(PulsePeriod, PulsePeriodUnitComboBox, period);
-                    }
-                }
-                else
-                {
-                    // In Period mode, send period directly to the device
-                    if (double.TryParse(PulsePeriod.Text, out double period))
-                    {
-                        string periodUnit = Services.UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-                        double actualPeriod = period * Services.UnitConversionUtility.GetPeriodMultiplier(periodUnit);
-
-                        // Send period command directly - don't convert to frequency
-                        rigolDG2072.SetPulsePeriod(activeChannel, actualPeriod);
-                        LogMessage($"Set pulse period to {period} {periodUnit} ({actualPeriod} s)");
-
-                        // Update UI but don't send this to device
-                        double frequency = 1.0 / actualPeriod;
-                        double displayValue = Services.UnitConversionUtility.ConvertFromMicroHz(frequency * 1e6,
-                            Services.UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox));
-                        ChannelFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-                    }
-                }
-
-                // Apply transition times and width
-                ApplyPulseTransitionTimes();
-                ApplyPulseWidth();
-
-                // Refresh UI with actual device values
-                UpdatePulseParameters(activeChannel);
-                LogMessage("All pulse parameters applied");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying pulse parameters: {ex.Message}");
-            }
-        }
-
-        // Separate method for applying transition times
-        private void ApplyPulseTransitionTimes()
-        {
-            if (double.TryParse(PulseRiseTime.Text, out double riseTime))
-            {
-                string riseTimeUnit = Services.UnitConversionUtility.GetPeriodUnit(PulseRiseTimeUnitComboBox);
-                double actualRiseTime = riseTime * Services.UnitConversionUtility.GetPeriodMultiplier(riseTimeUnit);
-                rigolDG2072.SetPulseRiseTime(activeChannel, actualRiseTime);
-                LogMessage($"Set pulse rise time to {riseTime} {riseTimeUnit} ({actualRiseTime} s)");
-            }
-
-            if (double.TryParse(PulseFallTime.Text, out double fallTime))
-            {
-                string fallTimeUnit = Services.UnitConversionUtility.GetPeriodUnit(PulseFallTimeUnitComboBox);
-                double actualFallTime = fallTime * Services.UnitConversionUtility.GetPeriodMultiplier(fallTimeUnit);
-                rigolDG2072.SetPulseFallTime(activeChannel, actualFallTime);
-                LogMessage($"Set pulse fall time to {fallTime} {fallTimeUnit} ({actualFallTime} s)");
-            }
-        }
-
-        // Separate method for applying pulse width
-        private void ApplyPulseWidth()
-        {
-            // Validate parameters before applying width
-            ValidatePulseParameters();
-
-            // Apply the width (which must fit within the period)
-            if (double.TryParse(PulseWidth.Text, out double width))
-            {
-                string widthUnit = Services.UnitConversionUtility.GetPeriodUnit(PulseWidthUnitComboBox);
-                double actualWidth = width * Services.UnitConversionUtility.GetPeriodMultiplier(widthUnit);
-                rigolDG2072.SetPulseWidth(activeChannel, actualWidth);
-                LogMessage($"Set pulse width to {width} {widthUnit} ({actualWidth} s)");
-            }
-        }
-
-        /// <summary>
-        /// Updates all pulse parameters in the UI with values from the device
-        /// </summary>
-        private void UpdatePulseParameters(int channel)
-        {
-            try
-            {
-                double width = rigolDG2072.GetPulseWidth(channel);
-                double riseTime = rigolDG2072.GetPulseRiseTime(channel);
-                double fallTime = rigolDG2072.GetPulseFallTime(channel);
-
-                Dispatcher.Invoke(() =>
-                {
-                    // Update pulse width with appropriate unit
-                    UpdatePulseTimeValue(PulseWidth, PulseWidthUnitComboBox, width);
-
-                    // Update rise time with appropriate unit
-                    UpdatePulseTimeValue(PulseRiseTime, PulseRiseTimeUnitComboBox, riseTime);
-
-                    // Update fall time with appropriate unit
-                    UpdatePulseTimeValue(PulseFallTime, PulseFallTimeUnitComboBox, fallTime);
-                });
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating pulse parameters for channel {channel}: {ex.Message}");
-            }
-        }
-
-        // Helper method to update time values in TextBoxes with appropriate units
-        private void UpdatePulseTimeValue(TextBox timeTextBox, ComboBox unitComboBox, double timeValue)
-        {
-            // Store current unit to preserve it if possible
-            string currentUnit = Services.UnitConversionUtility.GetPeriodUnit(unitComboBox);
-
-            // Convert to picoseconds for internal representation
-            double psValue = timeValue * 1e12; // Convert seconds to picoseconds
-
-            // Calculate the display value based on the current unit
-            double displayValue = Services.UnitConversionUtility.ConvertFromPicoSeconds(psValue, currentUnit);
-
-            // If the value would display poorly in the current unit, find a better unit
-            if (displayValue > 9999 || displayValue < 0.1)
-            {
-                string[] units = { "ps", "ns", "µs", "ms", "s" };
-                int bestUnitIndex = 2; // Default to µs
-
-                for (int i = 0; i < units.Length; i++)
-                {
-                    double testValue = Services.UnitConversionUtility.ConvertFromPicoSeconds(psValue, units[i]);
-                    if (testValue >= 0.1 && testValue < 10000)
-                    {
-                        bestUnitIndex = i;
-                        break;
-                    }
-                }
-
-                // Update the display value and select the best unit
-                displayValue = Services.UnitConversionUtility.ConvertFromPicoSeconds(psValue, units[bestUnitIndex]);
-
-                // Find and select the unit in the combo box
-                for (int i = 0; i < unitComboBox.Items.Count; i++)
-                {
-                    ComboBoxItem item = unitComboBox.Items[i] as ComboBoxItem;
-                    if (item != null && item.Content.ToString() == units[bestUnitIndex])
-                    {
-                        unitComboBox.SelectedIndex = i;
-                        break;
-                    }
-                }
-            }
-
-            timeTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-        }
-
-        // Methods for applying individual pulse parameters with unit conversion
-        private void ApplyPulseWidth(double width)
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                string unit = Services.UnitConversionUtility.GetPeriodUnit(PulseWidthUnitComboBox);
-                double actualWidth = width * Services.UnitConversionUtility.GetPeriodMultiplier(unit);
-
-                // Store the current period and transition times
-                double period = rigolDG2072.GetPulsePeriod(activeChannel);
-                double riseTime = rigolDG2072.GetPulseRiseTime(activeChannel);
-                double fallTime = rigolDG2072.GetPulseFallTime(activeChannel);
-
-                // Calculate max allowed width
-                double maxWidth = period - 0.7 * (riseTime + fallTime);
-                maxWidth *= 0.9; // 10% safety margin
-
-                // Ensure width is within allowed range
-                if (actualWidth > maxWidth)
-                {
-                    actualWidth = maxWidth;
-                    LogMessage($"Pulse width limited to {FormatWithMinimumDecimals(actualWidth)} seconds based on current period and transition times");
-
-                    // Update UI to show actual value
-                    Dispatcher.Invoke(() =>
-                    {
-                        UpdatePulseWidthInUI(actualWidth);
-                    });
-                }
-
-                // Apply the width
-                rigolDG2072.SetPulseWidth(activeChannel, actualWidth);
-                LogMessage($"Set CH{activeChannel} pulse width to {width} {unit} ({actualWidth} s)");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying pulse width: {ex.Message}");
-            }
-        }
-
-        // Update the individual parameter methods to follow the same approach
-        private void ApplyPulsePeriod(double period)
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                // Only use this direct period method in Period mode
-                if (!_frequencyModeActive)
-                {
-                    string unit = Services.UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-                    double actualPeriod = period * Services.UnitConversionUtility.GetPeriodMultiplier(unit);
-
-                    // Send period command directly
-                    rigolDG2072.SetPulsePeriod(activeChannel, actualPeriod);
-                    LogMessage($"Set CH{activeChannel} pulse period to {period} {unit} ({actualPeriod} s)");
-
-                    // After changing period, we need to validate width
-                    ValidatePulseParameters();
-
-                    // Update frequency display but don't send to device
-                    UpdateCalculatedRateValue();
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying pulse period: {ex.Message}");
-            }
-        }
-
-        private void ApplyPulseRiseTime(double riseTime)
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                string unit = Services.UnitConversionUtility.GetPeriodUnit(PulseRiseTimeUnitComboBox);
-                double actualRiseTime = riseTime * Services.UnitConversionUtility.GetPeriodMultiplier(unit);
-
-                // Set the rise time
-                rigolDG2072.SetPulseRiseTime(activeChannel, actualRiseTime);
-                LogMessage($"Set CH{activeChannel} pulse rise time to {riseTime} {unit} ({actualRiseTime} s)");
-
-                // After changing rise time, we may need to validate width
-                ValidatePulseParameters();
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying pulse rise time: {ex.Message}");
-            }
-        }
-
-        private void ApplyPulseFallTime(double fallTime)
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                string unit = Services.UnitConversionUtility.GetPeriodUnit(PulseFallTimeUnitComboBox);
-                double actualFallTime = fallTime * Services.UnitConversionUtility.GetPeriodMultiplier(unit);
-
-                // Set the fall time
-                rigolDG2072.SetPulseFallTime(activeChannel, actualFallTime);
-                LogMessage($"Set CH{activeChannel} pulse fall time to {fallTime} {unit} ({actualFallTime} s)");
-
-                // After changing fall time, we may need to validate width
-                ValidatePulseParameters();
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying pulse fall time: {ex.Message}");
-            }
-        }
-
-        // Helper method to adjust time values and units automatically
-        private void AdjustPulseTimeAndUnit(TextBox textBox, ComboBox unitComboBox)
-        {
-            if (!double.TryParse(textBox.Text, out double value))
-                return;
-
-            string currentUnit = ((ComboBoxItem)unitComboBox.SelectedItem).Content.ToString();
-
-            // Convert current value to picoseconds to maintain precision
-            double psValue = Services.UnitConversionUtility.ConvertToPicoSeconds(value, currentUnit);
-
-            // Define units in order from smallest to largest
-            string[] timeUnits = { "ps", "ns", "µs", "ms", "s" };
-
-            // Map the combo box selection to our array index
-            int unitIndex = 0;
-            for (int i = 0; i < timeUnits.Length; i++)
-            {
-                if (timeUnits[i] == currentUnit)
-                {
-                    unitIndex = i;
-                    break;
-                }
-            }
-
-            // Get the current value in the selected unit
-            double displayValue = Services.UnitConversionUtility.ConvertFromPicoSeconds(psValue, timeUnits[unitIndex]);
-
-            // Handle values that are too large (> 9999)
-            while (displayValue > 9999 && unitIndex < timeUnits.Length - 1)
-            {
-                unitIndex++;
-                displayValue = Services.UnitConversionUtility.ConvertFromPicoSeconds(psValue, timeUnits[unitIndex]);
-            }
-
-            // Handle values that are too small (< 0.1)
-            while (displayValue < 0.1 && unitIndex > 0)
-            {
-                unitIndex--;
-                displayValue = Services.UnitConversionUtility.ConvertFromPicoSeconds(psValue, timeUnits[unitIndex]);
-            }
-
-            // Update the textbox with formatted value
-            textBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-
-            // Find and select the unit in the combo box
-            for (int i = 0; i < unitComboBox.Items.Count; i++)
-            {
-                ComboBoxItem item = unitComboBox.Items[i] as ComboBoxItem;
-                if (item != null && item.Content.ToString() == timeUnits[unitIndex])
-                {
-                    unitComboBox.SelectedIndex = i;
-                    break;
-                }
-            }
-        }
 
         #endregion
 
@@ -2828,14 +2188,21 @@ namespace DG2072_USB_Control
 
         #region UI Formatting and Adjustment Methods
 
-        private void UpdateWaveformSpecificControls(string waveformType) //v5
+        // Update the UpdateWaveformSpecificControls method to use the pulse generator
+        private void UpdateWaveformSpecificControls(string waveformType)
         {
             string waveform = waveformType.ToUpper();
             bool isPulse = (waveform == "PULSE");
             bool isNoise = (waveform == "NOISE");
             bool isDualTone = (waveform == "DUAL TONE");
             bool isHarmonic = (waveform == "HARMONIC");
-            bool isDC = (waveform == "DC");  // Add DC type check
+            bool isDC = (waveform == "DC");
+
+            // Use the pulse generator to update pulse controls
+            if (pulseGenerator != null)
+            {
+                pulseGenerator.UpdatePulseControls(isPulse);
+            }
 
             // Handle symmetry control visibility (for Ramp waveform)
             if (SymmetryDockPanel != null)
@@ -3222,31 +2589,6 @@ namespace DG2072_USB_Control
             }
         }
 
-        //private string FormatWithMinimumDecimals(double value, int minDecimals = 1)
-        //{
-        //    // Get the number as a string with many decimal places
-        //    string fullPrecision = value.ToString("F12");
-
-        //    // Trim trailing zeros, but ensure at least minDecimals decimal places
-        //    string[] parts = fullPrecision.Split('.');
-
-        //    if (parts.Length == 1)
-        //    {
-        //        // No decimal part
-        //        return value.ToString($"F{minDecimals}");
-        //    }
-
-        //    // Trim trailing zeros but keep at least minDecimals digits
-        //    string decimals = parts[1].TrimEnd('0');
-
-        //    // If we trimmed too much, pad with zeros to meet minimum
-        //    if (decimals.Length < minDecimals)
-        //    {
-        //        decimals = decimals.PadRight(minDecimals, '0');
-        //    }
-
-        //    return $"{parts[0]}.{decimals}";
-        //}
 
         private void AdjustFrequencyAndUnit(TextBox textBox, ComboBox unitComboBox)
         {
@@ -4275,20 +3617,7 @@ namespace DG2072_USB_Control
         }
 
         // Helper method for formatting values with appropriate decimal places
-        private string FormatWithMinimumDecimals(double value)
-        {
-            // Format with at least one decimal place for clarity
-            if (Math.Abs(value) < 0.0001)
-                return value.ToString("0.0000");
-            else if (Math.Abs(value) < 0.001)
-                return value.ToString("0.000");
-            else if (Math.Abs(value) < 0.01)
-                return value.ToString("0.00");
-            else if (Math.Abs(value) < 10)
-                return value.ToString("0.0");
-            else
-                return value.ToString("0.0");
-        }
+
 
         #endregion
 

@@ -209,37 +209,8 @@ namespace DG2072_USB_Control.Services
             return $"{parts[0]}.{decimals}";
         }
 
-        //public static string FormatWithMinimumDecimals(double value, int minDecimals = 1)
-        //{
-        //    // Always force at least minDecimals for any number
-        //    return value.ToString($"F{minDecimals}");
-        //}
 
-        //public static string FormatWithMinimumDecimals(double value, int minDecimals = 1)
-        //{
-        //    // Get the number as a string with many decimal places
-        //    string fullPrecision = value.ToString("F12");
 
-        //    // Trim trailing zeros, but ensure at least minDecimals decimal places
-        //    string[] parts = fullPrecision.Split('.');
-
-        //    if (parts.Length == 1)
-        //    {
-        //        // No decimal part
-        //        return value.ToString($"F{minDecimals}");
-        //    }
-
-        //    // Trim trailing zeros but keep at least minDecimals digits
-        //    string decimals = parts[1].TrimEnd('0');
-
-        //    // If we trimmed too much, pad with zeros to meet minimum
-        //    if (decimals.Length < minDecimals)
-        //    {
-        //        decimals = decimals.PadRight(minDecimals, '0');
-        //    }
-
-        //    return $"{parts[0]}.{decimals}";
-        //}
 
         /// <summary>
         /// Gets the offset unit string from a ComboBox selection
