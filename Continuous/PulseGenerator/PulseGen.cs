@@ -10,7 +10,7 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
     /// <summary>
     /// Manages pulse waveform functionality for the DG2072 device
     /// </summary>
-    public class PulseGen
+    public class PulseGen : IPulseEventHandler
     {
         // Device reference
         private readonly RigolDG2072 _device;
@@ -52,6 +52,44 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
         // Event for logging
         public event EventHandler<string> LogEvent;
 
+
+
+        // Implement interface methods
+        public void OnPulsePeriodTextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox == null || !double.TryParse(textBox.Text, out double period))
+                return;
+
+            // Use your existing timer-based logic inside PulseGen
+            if (!_frequencyModeActive)
+            {
+                InitializeOrResetTimer(ref _pulsePeriodUpdateTimer, () => {
+                    if (double.TryParse(textBox.Text, out double p))
+                    {
+                        ApplyPulsePeriod(p);
+                        // Update calculated frequency
+                        UpdateCalculatedRateValue();
+                    }
+                });
+            }
+            // In frequency mode, just update the calculated value
+            else if (_frequencyModeActive)
+            {
+                UpdateCalculatedRateValue();
+            }
+        }
+
+        public void OnPulsePeriodLostFocus(object sender, RoutedEventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox == null || !double.TryParse(textBox.Text, out double _))
+                return;
+
+            AdjustPulseTimeAndUnit(textBox, _pulsePeriodUnitComboBox);
+        }
+
+
         /// <summary>
         /// Constructor - initializes the pulse generator with device and UI references
         /// </summary>
@@ -74,6 +112,8 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
             _pulseFallTimeUnitComboBox = mainWindow.FindName("PulseFallTimeUnitComboBox") as ComboBox;
             _pulseRateModeToggle = mainWindow.FindName("PulseRateModeToggle") as ToggleButton;
 
+            
+
             // Find dock panels
             _pulseWidthDockPanel = FindVisualParent<DockPanel>(_pulseWidthTextBox);
             _pulsePeriodDockPanel = FindVisualParent<DockPanel>(_pulsePeriodTextBox);
@@ -86,7 +126,8 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
             _frequencyUnitComboBox = mainWindow.FindName("ChannelFrequencyUnitComboBox") as ComboBox;
 
             // Attach event handlers
-            AttachEventHandlers();
+            //AttachEventHandlers();    // We don't need to attach event handlers here anymore since MainWindow now delegates to us
+
         }
 
         /// <summary>
@@ -252,10 +293,14 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
                 {
                     Interval = TimeSpan.FromMilliseconds(500)
                 };
+
+                // Create a local copy of the action to avoid capturing the ref parameter
+                DispatcherTimer localTimer = timer;
+                Action action = timerAction;
                 timer.Tick += (s, args) =>
                 {
-                    timer.Stop();
-                    timerAction();
+                    localTimer.Stop();
+                    action();
                 };
             }
 
@@ -1011,5 +1056,176 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
         }
 
         #endregion
+
+
+        #region Period Methods
+
+        // Add these implementations to the PulseGen class
+
+        // Period methods
+        //public void OnPulsePeriodTextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    TextBox textBox = sender as TextBox;
+        //    if (textBox == null || !double.TryParse(textBox.Text, out double period))
+        //        return;
+
+        //    // In period mode, update the device directly
+        //    if (!_frequencyModeActive)
+        //    {
+        //        InitializeOrResetTimer(ref _pulsePeriodUpdateTimer, () => {
+        //            if (double.TryParse(textBox.Text, out double p))
+        //            {
+        //                ApplyPulsePeriod(p);
+        //                // Update calculated frequency
+        //                UpdateCalculatedRateValue();
+        //            }
+        //        });
+        //    }
+        //    // In frequency mode, just update the calculated value
+        //    else if (_frequencyModeActive)
+        //    {
+        //        UpdateCalculatedRateValue();
+        //    }
+        //}
+
+        //public void OnPulsePeriodLostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    TextBox textBox = sender as TextBox;
+        //    if (textBox != null && double.TryParse(textBox.Text, out double _))
+        //    {
+        //        AdjustPulseTimeAndUnit(textBox, _pulsePeriodUnitComboBox);
+        //    }
+        //}
+
+        public void OnPulsePeriodUnitChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsDeviceConnected()) return;
+
+            if (double.TryParse(_pulsePeriodTextBox.Text, out double period))
+            {
+                ApplyPulsePeriod(period);
+                // Update calculated frequency
+                UpdateCalculatedRateValue();
+            }
+        }
+
+        // Rate mode toggle
+        public void OnPulseRateModeToggleClicked(object sender, RoutedEventArgs e)
+        {
+            _frequencyModeActive = _pulseRateModeToggle.IsChecked == true;
+            _pulseRateModeToggle.Content = _frequencyModeActive ? "To Period" : "To Frequency";
+
+            // Update the UI based on the selected mode
+            UpdatePulseRateMode();
+
+            // Recalculate and update the displayed values
+            UpdateCalculatedRateValue();
+        }
+
+        // Rise Time methods
+        public void OnPulseRiseTimeTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!IsDeviceConnected()) return;
+            TextBox textBox = sender as TextBox;
+            if (textBox == null || !double.TryParse(textBox.Text, out double riseTime)) return;
+
+            InitializeOrResetTimer(ref _pulseRiseTimeUpdateTimer, () => {
+                if (double.TryParse(textBox.Text, out double rt))
+                {
+                    ApplyPulseRiseTime(rt);
+                }
+            });
+        }
+
+        public void OnPulseRiseTimeLostFocus(object sender, RoutedEventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null && double.TryParse(textBox.Text, out double _))
+            {
+                AdjustPulseTimeAndUnit(textBox, _pulseRiseTimeUnitComboBox);
+            }
+        }
+
+        public void OnPulseRiseTimeUnitChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsDeviceConnected()) return;
+
+            if (double.TryParse(_pulseRiseTimeTextBox.Text, out double riseTime))
+            {
+                ApplyPulseRiseTime(riseTime);
+            }
+        }
+
+        // Width methods
+        public void OnPulseWidthTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!IsDeviceConnected()) return;
+            TextBox textBox = sender as TextBox;
+            if (textBox == null || !double.TryParse(textBox.Text, out double width)) return;
+
+            InitializeOrResetTimer(ref _pulseWidthUpdateTimer, () => {
+                if (double.TryParse(textBox.Text, out double w))
+                {
+                    ApplyPulseWidth(w);
+                }
+            });
+        }
+
+        public void OnPulseWidthLostFocus(object sender, RoutedEventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null && double.TryParse(textBox.Text, out double _))
+            {
+                AdjustPulseTimeAndUnit(textBox, _pulseWidthUnitComboBox);
+            }
+        }
+
+        public void OnPulseWidthUnitChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsDeviceConnected()) return;
+
+            if (double.TryParse(_pulseWidthTextBox.Text, out double width))
+            {
+                ApplyPulseWidth(width);
+            }
+        }
+
+        // Fall Time methods
+        public void OnPulseFallTimeTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!IsDeviceConnected()) return;
+            TextBox textBox = sender as TextBox;
+            if (textBox == null || !double.TryParse(textBox.Text, out double fallTime)) return;
+
+            InitializeOrResetTimer(ref _pulseFallTimeUpdateTimer, () => {
+                if (double.TryParse(textBox.Text, out double ft))
+                {
+                    ApplyPulseFallTime(ft);
+                }
+            });
+        }
+
+        public void OnPulseFallTimeLostFocus(object sender, RoutedEventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null && double.TryParse(textBox.Text, out double _))
+            {
+                AdjustPulseTimeAndUnit(textBox, _pulseFallTimeUnitComboBox);
+            }
+        }
+
+        public void OnPulseFallTimeUnitChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsDeviceConnected()) return;
+
+            if (double.TryParse(_pulseFallTimeTextBox.Text, out double fallTime))
+            {
+                ApplyPulseFallTime(fallTime);
+            }
+        }
+
+
+        #endregion
+
     }
 }

@@ -18,6 +18,7 @@ using DG2072_USB_Control.Continuous.Harmonics;
 using DG2072_USB_Control.Continuous.PulseGenerator;
 
 
+
 namespace DG2072_USB_Control
 {
     public partial class MainWindow : System.Windows.Window
@@ -47,10 +48,10 @@ namespace DG2072_USB_Control
         private DispatcherTimer _dutyCycleUpdateTimer;
         private DockPanel DutyCycleDockPanel;
 
-        private DispatcherTimer _pulseWidthUpdateTimer;
-        private DispatcherTimer _pulsePeriodUpdateTimer;
-        private DispatcherTimer _pulseRiseTimeUpdateTimer;
-        private DispatcherTimer _pulseFallTimeUpdateTimer;
+        //private DispatcherTimer _pulseWidthUpdateTimer;
+        //private DispatcherTimer _pulsePeriodUpdateTimer;
+        //private DispatcherTimer _pulseRiseTimeUpdateTimer;
+        //private DispatcherTimer _pulseFallTimeUpdateTimer;
         // Add this with the other timer declarations in MainWindow.xaml.cs:
         private DispatcherTimer _secondaryFrequencyUpdateTimer;
 
@@ -320,6 +321,7 @@ namespace DG2072_USB_Control
                 LogMessage($"Error refreshing Channel {activeChannel} settings: {ex.Message}");
             }
         }
+        
         private void UpdateDutyCycleValue(TextBox dutyCycleTextBox, int channel)
         {
             try
@@ -1261,86 +1263,6 @@ namespace DG2072_USB_Control
 
 
 
-        // Add this method to MainWindow.xaml.cs to debug the dual tone issues
-        //private void DiagnoseDualToneSettings()
-        //{
-        //    if (!isConnected) return;
-
-        //    try
-        //    {
-        //        LogMessage("Starting dual tone diagnostics...");
-
-        //        // Try to query the dual tone capabilities
-        //        rigolDG2072.QueryDualToneCapabilities(activeChannel);
-
-        //        // Try applying dual tone with different command patterns
-        //        LogMessage("Testing direct apply approach...");
-        //        rigolDG2072.SendCommand($"SOURce{activeChannel}:APPLy:SIN 1000,1.0,0.0,0.0");
-        //        System.Threading.Thread.Sleep(100);
-
-        //        rigolDG2072.SendCommand($"SOURce{activeChannel}:APPLy:DUALTone 1000,1.0,0.5,0.0");
-        //        System.Threading.Thread.Sleep(100);
-
-        //        // Verify what was applied
-        //        rigolDG2072.QueryDualToneCapabilities(activeChannel);
-
-        //        LogMessage("Dual tone diagnostics completed.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        LogMessage($"Error in dual tone diagnostics: {ex.Message}");
-        //    }
-        //}
-
-
-
-
-
-        // Add this helper method
-        //private void AdjustOffsetAndUnit(TextBox textBox, ComboBox unitComboBox)
-        //{
-        //    if (!double.TryParse(textBox.Text, out double value))
-        //        return;
-
-        //    string currentUnit = ((ComboBoxItem)unitComboBox.SelectedItem).Content.ToString();
-
-        //    // Convert to appropriate unit
-        //    if (Math.Abs(value) < 0.1 && currentUnit == "V")
-        //    {
-        //        // Switch to mV for small values
-        //        value *= 1000.0;
-        //        for (int i = 0; i < unitComboBox.Items.Count; i++)
-        //        {
-        //            ComboBoxItem item = unitComboBox.Items[i] as ComboBoxItem;
-        //            if (item != null && item.Content.ToString() == "mV")
-        //            {
-        //                unitComboBox.SelectedIndex = i;
-        //                break;
-        //            }
-        //        }
-        //    }
-        //    else if (Math.Abs(value) > 1000.0 && currentUnit == "mV")
-        //    {
-        //        // Switch to V for large values
-        //        value /= 1000.0;
-        //        for (int i = 0; i < unitComboBox.Items.Count; i++)
-        //        {
-        //            ComboBoxItem item = unitComboBox.Items[i] as ComboBoxItem;
-        //            if (item != null && item.Content.ToString() == "V")
-        //            {
-        //                unitComboBox.SelectedIndex = i;
-        //                break;
-        //            }
-        //        }
-        //    }
-
-        //    // Format with minimum decimals
-        //    textBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(value);
-        //}
-
-
-
-
         private void ChannelWaveformComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -2014,9 +1936,109 @@ namespace DG2072_USB_Control
         #region Pulse Parameter Handling
 
 
+        private void ChannelPulsePeriodTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulsePeriodTextChanged(sender, e);
+        }
 
+        private void ChannelPulsePeriodTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulsePeriodLostFocus(sender, e);
+        }
 
+        private void PulsePeriodUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulsePeriodUnitChanged(sender, e);
+        }
 
+        private void PulseRateModeToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseRateModeToggleClicked(sender, e);
+        }
+
+        // Add these methods to MainWindow.xaml.cs
+
+        //private void ChannelPulsePeriodTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        //{
+        //    if (pulseGenerator != null)
+        //        pulseGenerator.OnPulsePeriodTextChanged(sender, e);
+        //}
+
+        //private void ChannelPulsePeriodTextBox_LostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (pulseGenerator != null)
+        //        pulseGenerator.OnPulsePeriodLostFocus(sender, e);
+        //}
+
+        //private void PulsePeriodUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (pulseGenerator != null)
+        //        pulseGenerator.OnPulsePeriodUnitChanged(sender, e);
+        //}
+
+        //private void PulseRateModeToggle_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (pulseGenerator != null)
+        //        pulseGenerator.OnPulseRateModeToggleClicked(sender, e);
+        //}
+
+        private void ChannelPulseRiseTimeTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseRiseTimeTextChanged(sender, e);
+        }
+
+        private void ChannelPulseRiseTimeTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseRiseTimeLostFocus(sender, e);
+        }
+
+        private void PulseRiseTimeUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseRiseTimeUnitChanged(sender, e);
+        }
+
+        private void ChannelPulseWidthTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseWidthTextChanged(sender, e);
+        }
+
+        private void ChannelPulseWidthTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseWidthLostFocus(sender, e);
+        }
+
+        private void PulseWidthUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseWidthUnitChanged(sender, e);
+        }
+
+        private void ChannelPulseFallTimeTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseFallTimeTextChanged(sender, e);
+        }
+
+        private void ChannelPulseFallTimeTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseFallTimeLostFocus(sender, e);
+        }
+
+        private void PulseFallTimeUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (pulseGenerator != null)
+                pulseGenerator.OnPulseFallTimeUnitChanged(sender, e);
+        }
 
         #endregion
 
@@ -3018,8 +3040,8 @@ namespace DG2072_USB_Control
                 double f2Hz = centerFreqHz + (offsetFreqHz / 2.0);
 
                 // Update the calculated values display
-                CalculatedF1Display.Text = $"{FormatWithMinimumDecimals(f1Hz)} Hz";
-                CalculatedF2Display.Text = $"{FormatWithMinimumDecimals(f2Hz)} Hz";
+                CalculatedF1Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f1Hz)} Hz";
+                CalculatedF2Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f2Hz)} Hz";
 
                 // Apply to device with f1Hz and f2Hz
                 ApplyDualToneWithFrequencies(f1Hz, f2Hz);
