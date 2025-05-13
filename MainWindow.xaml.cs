@@ -20,7 +20,7 @@ using DG2072_USB_Control.Continuous.DualTone;
 using DG2072_USB_Control.Continuous.Ramp;
 using DG2072_USB_Control.Continuous.Square;
 using DG2072_USB_Control.Continuous.Sinusoid;
-
+using DG2072_USB_Control.Continuous.DC;
 
 
 namespace DG2072_USB_Control
@@ -46,10 +46,10 @@ namespace DG2072_USB_Control
         private DispatcherTimer _amplitudeUpdateTimer;
         private DispatcherTimer _offsetUpdateTimer;
         private DispatcherTimer _phaseUpdateTimer;
-        private DispatcherTimer _symmetryUpdateTimer;
+        // private DispatcherTimer _symmetryUpdateTimer;
         private DockPanel SymmetryDockPanel;
 
-        private DispatcherTimer _dutyCycleUpdateTimer;
+        // private DispatcherTimer _dutyCycleUpdateTimer;
         private DockPanel DutyCycleDockPanel;
 
         // Add this with the other timer declarations in MainWindow.xaml.cs:
@@ -82,6 +82,9 @@ namespace DG2072_USB_Control
 
         //Sinusoid generator management
         private SinGen sineGenerator;
+
+        //dc generator management
+        private DCGen dcGenerator;
 
         public MainWindow()
         {
@@ -130,6 +133,10 @@ namespace DG2072_USB_Control
                 // update sine generator with the new active channel
                 if (sineGenerator != null)
                     sineGenerator.ActiveChannel = activeChannel;
+
+                // Update DC generator with the new active channel
+                if (dcGenerator != null)
+                    dcGenerator.ActiveChannel = activeChannel;
 
             }
             else
@@ -181,96 +188,10 @@ namespace DG2072_USB_Control
                 }
 
                 // Special handling for DC waveform
-                if (waveform == "DC")
+                if (waveform == "DC" && dcGenerator != null)
                 {
-                    // For DC, we only care about the DC voltage (which is the offset parameter)
-                    // and the output impedance
-                    double dcVoltage = rigolDG2072.GetDCVoltage(activeChannel);
-
-                    // Update DC voltage text box
-                    Dispatcher.Invoke(() =>
-                    {
-                        // Check current unit setting and adjust displayed value
-                        string unit = ((ComboBoxItem)DCVoltageUnitComboBox.SelectedItem).Content.ToString();
-                        if (unit == "mV")
-                        {
-                            DCVoltageTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(dcVoltage * 1000);
-                        }
-                        else
-                        {
-                            DCVoltageTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(dcVoltage);
-                        }
-                    });
-
-                    // Get and update impedance setting
-                    try
-                    {
-                        double impedance = rigolDG2072.GetOutputImpedance(activeChannel);
-
-                        Dispatcher.Invoke(() =>
-                        {
-                            // Select the appropriate impedance in the combo box
-                            if (double.IsInfinity(impedance))
-                            {
-                                // High-Z
-                                for (int i = 0; i < DCImpedanceComboBox.Items.Count; i++)
-                                {
-                                    ComboBoxItem item = DCImpedanceComboBox.Items[i] as ComboBoxItem;
-                                    if (item != null && item.Content.ToString() == "High-Z")
-                                    {
-                                        DCImpedanceComboBox.SelectedIndex = i;
-                                        break;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // Find closest match
-                                ComboBoxItem bestMatch = null;
-                                double bestDifference = double.MaxValue;
-
-                                foreach (ComboBoxItem item in DCImpedanceComboBox.Items)
-                                {
-                                    string content = item.Content.ToString();
-                                    double itemImpedance = 0;
-
-                                    if (content == "High-Z")
-                                        continue;
-
-                                    if (content.EndsWith("kΩ"))
-                                    {
-                                        if (double.TryParse(content.Replace("kΩ", ""), out double kOhms))
-                                        {
-                                            itemImpedance = kOhms * 1000;
-                                        }
-                                    }
-                                    else if (content.EndsWith("Ω"))
-                                    {
-                                        if (double.TryParse(content.Replace("Ω", ""), out double ohms))
-                                        {
-                                            itemImpedance = ohms;
-                                        }
-                                    }
-
-                                    double difference = Math.Abs(itemImpedance - impedance);
-                                    if (difference < bestDifference)
-                                    {
-                                        bestDifference = difference;
-                                        bestMatch = item;
-                                    }
-                                }
-
-                                if (bestMatch != null)
-                                {
-                                    DCImpedanceComboBox.SelectedItem = bestMatch;
-                                }
-                            }
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessage($"Error refreshing impedance setting: {ex.Message}");
-                    }
+                    // Delegate to DC generator for handling DC-specific settings
+                    dcGenerator.RefreshDCSettings();
 
                     // Update output state
                     UpdateOutputState(ChannelOutputToggle, activeChannel);
@@ -325,13 +246,9 @@ namespace DG2072_USB_Control
                     {
                         rampGenerator.UpdateSymmetryValue();
                     }
-
-                    else if (waveform == "SQUARE")
+                    else if (waveform == "SQUARE" && squareGenerator != null)
                     {
-                        if (squareGenerator != null)
-                        {
-                            squareGenerator.UpdateDutyCycleValue();
-                        }
+                        squareGenerator.UpdateDutyCycleValue();
                     }
                     else if (waveform == "HARMONIC" && _harmonicsUIController != null)
                     {
@@ -357,7 +274,7 @@ namespace DG2072_USB_Control
                 LogMessage($"Error refreshing Channel {activeChannel} settings: {ex.Message}");
             }
         }
-        
+       
         #endregion
 
         #region Auto-Refresh Methods
@@ -970,6 +887,10 @@ namespace DG2072_USB_Control
             sineGenerator = new SinGen(rigolDG2072, activeChannel, this);
             sineGenerator.LogEvent += (s, message) => LogMessage(message);
 
+            // Initialize the DC generator after UI references are set up
+            dcGenerator = new DCGen(rigolDG2072, activeChannel, this);
+            dcGenerator.LogEvent += (s, message) => LogMessage(message);
+
             // After window initialization, use a small delay before auto-connecting
             // This gives the UI time to fully render before connecting
             DispatcherTimer startupTimer = new DispatcherTimer
@@ -1403,69 +1324,17 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            else if (waveform == "DC")
+            else if (waveform == "DC" && dcGenerator != null)
             {
                 LogMessage("Switching to DC waveform mode...");
                 try
                 {
-                    // Get current offset as starting point for DC voltage
-                    double offset = rigolDG2072.GetOffset(activeChannel);
-
-                    // Update the DC Voltage textbox with the current offset value
-                    DCVoltageTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(offset);
-
-                    // Set the waveform on the device - using APPLY:DC command
-                    // According to the documentation, we need placeholders for frequency and amplitude
-                    // even though they're not used in DC mode
-                    rigolDG2072.SendCommand($":SOURCE{activeChannel}:APPLY:DC 1,1,{offset}");
-                    System.Threading.Thread.Sleep(100);  // Give device time to process
+                    // Delegate to the DC generator
+                    dcGenerator.ApplyDCParameters();
 
                     // Verify the waveform was set correctly
                     string verifyWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
                     LogMessage($"Verification - Device waveform now: {verifyWaveform}");
-
-                    // Get current impedance setting for display
-                    string impedanceResponse = rigolDG2072.SendQuery($":OUTP{activeChannel}:IMP?").Trim();
-                    double impedance = 50.0; // Default to 50 Ohms
-
-                    // Try to parse the response, if it's "INF" or very large, it's High-Z
-                    if (impedanceResponse.Contains("INF") || (double.TryParse(impedanceResponse, out double imp) && imp > 1e10))
-                    {
-                        // High-Z setting
-                        DCImpedanceComboBox.SelectedIndex = 0; // Assuming the first index is "High-Z"
-                    }
-                    else if (double.TryParse(impedanceResponse, out impedance))
-                    {
-                        // Find closest impedance match in the combo box
-                        if (impedance >= 1000)
-                        {
-                            // kOhm range
-                            foreach (ComboBoxItem item in DCImpedanceComboBox.Items)
-                            {
-                                if (item.Content.ToString().Contains("k") &&
-                                    double.TryParse(item.Content.ToString().Replace("kΩ", ""), out double value) &&
-                                    Math.Abs(value * 1000 - impedance) < 10)
-                                {
-                                    DCImpedanceComboBox.SelectedItem = item;
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // Ohm range
-                            foreach (ComboBoxItem item in DCImpedanceComboBox.Items)
-                            {
-                                if (item.Content.ToString().EndsWith("Ω") && !item.Content.ToString().Contains("k") &&
-                                    double.TryParse(item.Content.ToString().Replace("Ω", ""), out double value) &&
-                                    Math.Abs(value - impedance) < 5)
-                                {
-                                    DCImpedanceComboBox.SelectedItem = item;
-                                    break;
-                                }
-                            }
-                        }
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -1492,10 +1361,10 @@ namespace DG2072_USB_Control
 
                     // Map upper case waveform name to the correct apply command
                     string applyWaveform = waveform;
-                    if (waveform == "SINE") applyWaveform = "SIN";
+                    if (waveform == "SINE")   applyWaveform = "SIN";
                     if (waveform == "SQUARE") applyWaveform = "SQU";
-                    if (waveform == "PULSE") applyWaveform = "PULS";
-                    if (waveform == "NOISE") applyWaveform = "NOIS";
+                    if (waveform == "PULSE")  applyWaveform = "PULS";
+                    if (waveform == "NOISE")  applyWaveform = "NOIS";
 
                     // Special handling for NOISE waveform
                     if (waveform == "NOISE")
@@ -1526,6 +1395,7 @@ namespace DG2072_USB_Control
             // Update waveform-specific UI elements visibility
             UpdateWaveformSpecificControls(waveform);
         }
+
         private void ChannelFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -2977,111 +2847,28 @@ namespace DG2072_USB_Control
         // Add this method to handle DC voltage changes
         private void DCVoltageTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (!isConnected) return;
-            if (!double.TryParse(DCVoltageTextBox.Text, out double voltage)) return;
-
-            if (_dcVoltageUpdateTimer == null)
-            {
-                _dcVoltageUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _dcVoltageUpdateTimer.Tick += (s, args) =>
-                {
-                    _dcVoltageUpdateTimer.Stop();
-                    if (double.TryParse(DCVoltageTextBox.Text, out double volt))
-                    {
-                        ApplyDCVoltage(volt);
-                    }
-                };
-            }
-
-            _dcVoltageUpdateTimer.Stop();
-            _dcVoltageUpdateTimer.Start();
+            if (dcGenerator != null)
+                dcGenerator.OnDCVoltageTextChanged(sender, e);
         }
 
-        // Add this method to handle unit changes for DC voltage
+        private void DCVoltageTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (dcGenerator != null)
+                dcGenerator.OnDCVoltageLostFocus(sender, e);
+        }
+
         private void DCVoltageUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (!isConnected) return;
-            if (!double.TryParse(DCVoltageTextBox.Text, out double voltage)) return;
-
-            string unitStr = ((ComboBoxItem)DCVoltageUnitComboBox.SelectedItem).Content.ToString();
-            double multiplier = unitStr == "mV" ? 0.001 : 1.0;  // Convert mV to V if needed
-
-            ApplyDCVoltage(voltage * multiplier);
+            if (dcGenerator != null)
+                dcGenerator.OnDCVoltageUnitChanged(sender, e);
         }
 
-        // Add this method to handle impedance changes
         private void DCImpedanceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (!isConnected) return;
-
-            string impedanceStr = ((ComboBoxItem)DCImpedanceComboBox.SelectedItem).Content.ToString();
-            double impedance = 50.0; // Default value
-
-            if (impedanceStr == "High-Z")
-            {
-                // Set to high impedance
-                rigolDG2072.SendCommand($":OUTP{activeChannel}:IMP INF");
-            }
-            else if (impedanceStr.EndsWith("Ω"))
-            {
-                // Parse the value from the string
-                if (impedanceStr.Contains("k"))
-                {
-                    // kOhm value
-                    if (double.TryParse(impedanceStr.Replace("kΩ", ""), out double kOhms))
-                    {
-                        impedance = kOhms * 1000;
-                    }
-                }
-                else
-                {
-                    // Ohm value
-                    if (double.TryParse(impedanceStr.Replace("Ω", ""), out double ohms))
-                    {
-                        impedance = ohms;
-                    }
-                }
-
-                // Apply the impedance setting
-                rigolDG2072.SendCommand($":OUTP{activeChannel}:IMP {impedance}");
-            }
-
-            LogMessage($"Set output impedance for channel {activeChannel} to {impedanceStr}");
-
-            // After changing impedance, we need to reapply the DC voltage
-            // since the voltage displayed may change based on load impedance
-            if (double.TryParse(DCVoltageTextBox.Text, out double voltage))
-            {
-                string unitStr = ((ComboBoxItem)DCVoltageUnitComboBox.SelectedItem).Content.ToString();
-                double multiplier = unitStr == "mV" ? 0.001 : 1.0;
-                ApplyDCVoltage(voltage * multiplier);
-            }
+            if (dcGenerator != null)
+                dcGenerator.OnDCImpedanceChanged(sender, e);
         }
 
-        // Method to apply DC voltage to the device
-        private void ApplyDCVoltage(double voltage)
-        {
-            if (!isConnected) return;
-
-            try
-            {
-                // For DC, we use the APPLY:DC command with placeholders for frequency and amplitude
-                rigolDG2072.SendCommand($":SOURCE{activeChannel}:APPLY:DC 1,1,{voltage}");
-                LogMessage($"Set DC voltage for channel {activeChannel} to {voltage} V");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying DC voltage: {ex.Message}");
-            }
-        }
-
-        private void UpdateDCControls()
-        {
-            // Method to update DC controls based on device settings
-        }
         private void HarmonicsToggle_Click(object sender, RoutedEventArgs e)
         {
             if (!isConnected) return;
@@ -3109,6 +2896,7 @@ namespace DG2072_USB_Control
                 LogMessage($"Error toggling harmonics: {ex.Message}");
             }
         }
+
 
         #endregion
 

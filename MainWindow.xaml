@@ -783,14 +783,15 @@ Center = (F1 + F2)/2, Offset = F2 - F1.
                                         <DockPanel Margin="0,5">
                                             <Label Content="DC Voltage:" Width="120" ToolTip="Set the DC voltage level"/>
                                             <TextBox x:Name="DCVoltageTextBox" Width="100" 
-                                                         TextChanged="DCVoltageTextBox_TextChanged" 
-                                                         Text="0.0" 
-                                                         HorizontalContentAlignment="Right" 
-                                                         VerticalContentAlignment="Center"/>
+                                                    TextChanged="DCVoltageTextBox_TextChanged" 
+                                                    LostFocus="DCVoltageTextBox_LostFocus"
+                                                    Text="0.0" 
+                                                    HorizontalContentAlignment="Right" 
+                                                    VerticalContentAlignment="Center"/>
                                             <ComboBox x:Name="DCVoltageUnitComboBox" Width="70" 
-                                                          Margin="5,0,0,0" 
-                                                          SelectionChanged="DCVoltageUnitComboBox_SelectionChanged" 
-                                                          HorizontalAlignment="Left">
+                                                      Margin="5,0,0,0" 
+                                                      SelectionChanged="DCVoltageUnitComboBox_SelectionChanged" 
+                                                      HorizontalAlignment="Left">
                                                 <ComboBoxItem Content="V" IsSelected="True"/>
                                                 <ComboBoxItem Content="mV"/>
                                             </ComboBox>
