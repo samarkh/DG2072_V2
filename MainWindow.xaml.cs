@@ -19,6 +19,7 @@ using DG2072_USB_Control.Continuous.PulseGenerator;
 using DG2072_USB_Control.Continuous.DualTone;
 using DG2072_USB_Control.Continuous.Ramp;
 using DG2072_USB_Control.Continuous.Square;
+using DG2072_USB_Control.Continuous.Sinusoid;
 
 
 
@@ -76,9 +77,11 @@ namespace DG2072_USB_Control
         // Ramp generator management
         private RampGen rampGenerator;
 
-
         //Square Generator management
         private SquareGen squareGenerator;
+
+        //Sinusoid generator management
+        private SinGen sineGenerator;
 
         public MainWindow()
         {
@@ -115,15 +118,18 @@ namespace DG2072_USB_Control
                 if (pulseGenerator != null)
                     pulseGenerator.ActiveChannel = activeChannel;
 
-                //update ramp generator with the new active channel
+                // update ramp generator with the new active channel
                 if (rampGenerator != null)
                     rampGenerator.ActiveChannel = activeChannel;
                 // Other component updates...
 
-                //update square generator with the new active channel
+                // update square generator with the new active channel
                 if (squareGenerator != null)
                     squareGenerator.ActiveChannel = activeChannel;
 
+                // update sine generator with the new active channel
+                if (sineGenerator != null)
+                    sineGenerator.ActiveChannel = activeChannel;
 
             }
             else
@@ -169,7 +175,10 @@ namespace DG2072_USB_Control
 
                 // Now get the currently selected waveform from the UI
                 string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
-                LogMessage($"Refreshing settings for waveform: {waveform}");
+                if (waveform == "SINE" && sineGenerator != null)
+                {
+                    sineGenerator.RefreshSineParameters();
+                }
 
                 // Special handling for DC waveform
                 if (waveform == "DC")
@@ -957,7 +966,9 @@ namespace DG2072_USB_Control
             squareGenerator = new SquareGen(rigolDG2072, activeChannel, this);
             squareGenerator.LogEvent += (s, message) => LogMessage(message);
 
-
+            // Initialize the sine generator after UI references are set up
+            sineGenerator = new SinGen(rigolDG2072, activeChannel, this);
+            sineGenerator.LogEvent += (s, message) => LogMessage(message);
 
             // After window initialization, use a small delay before auto-connecting
             // This gives the UI time to fully render before connecting
@@ -998,8 +1009,8 @@ namespace DG2072_USB_Control
 
             // In Window_Loaded method, add this to find and store the DC panel
             DCVoltageDockPanel = FindVisualParent<DockPanel>(DCVoltageTextBox);
+            
             // Initialize harmonics management
-
             _harmonicsManager = new HarmonicsManager(rigolDG2072, activeChannel);
             _harmonicsManager.LogEvent += (s, message) => LogMessage(message);
 
@@ -1262,7 +1273,6 @@ namespace DG2072_USB_Control
 
                 try
                 {
-
                     // Then enable harmonic mode
                     rigolDG2072.SendCommand($":SOUR{activeChannel}:HARM:STAT ON");
                     System.Threading.Thread.Sleep(100);
@@ -1357,7 +1367,6 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-
             else if (waveform == "USER")
             {
                 LogMessage("Switching to arbitrary waveform mode...");
@@ -1394,7 +1403,6 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-
             else if (waveform == "DC")
             {
                 LogMessage("Switching to DC waveform mode...");
@@ -1465,7 +1473,12 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-
+            // Add the sine generator code here
+            else if (waveform == "SINE" && sineGenerator != null)
+            {
+                // Delegate to the sine generator
+                sineGenerator.ApplySineParameters();
+            }
             else
             {
                 // For all other waveforms, use the standard APPLY command to ensure it's set properly
@@ -1513,7 +1526,6 @@ namespace DG2072_USB_Control
             // Update waveform-specific UI elements visibility
             UpdateWaveformSpecificControls(waveform);
         }
-
         private void ChannelFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!isConnected) return;
