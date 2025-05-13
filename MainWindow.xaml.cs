@@ -18,6 +18,7 @@ using DG2072_USB_Control.Continuous.Harmonics;
 using DG2072_USB_Control.Continuous.PulseGenerator;
 using DG2072_USB_Control.Continuous.DualTone;
 using DG2072_USB_Control.Continuous.Ramp;
+using DG2072_USB_Control.Continuous.Square;
 
 
 
@@ -75,6 +76,10 @@ namespace DG2072_USB_Control
         // Ramp generator management
         private RampGen rampGenerator;
 
+
+        //Square Generator management
+        private SquareGen squareGenerator;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -89,8 +94,6 @@ namespace DG2072_USB_Control
             // Initialize auto-refresh feature
             InitializeAutoRefresh();
         }
-
-
 
         //**************** Regions
 
@@ -112,9 +115,16 @@ namespace DG2072_USB_Control
                 if (pulseGenerator != null)
                     pulseGenerator.ActiveChannel = activeChannel;
 
+                //update ramp generator with the new active channel
                 if (rampGenerator != null)
                     rampGenerator.ActiveChannel = activeChannel;
                 // Other component updates...
+
+                //update square generator with the new active channel
+                if (squareGenerator != null)
+                    squareGenerator.ActiveChannel = activeChannel;
+
+
             }
             else
             {
@@ -128,10 +138,15 @@ namespace DG2072_USB_Control
                 if (pulseGenerator != null)
                     pulseGenerator.ActiveChannel = activeChannel;
 
-                // Add this missing code:
+                // update ramp generator with the new active channel
                 if (rampGenerator != null)
                     rampGenerator.ActiveChannel = activeChannel;
                 // Other component updates...
+
+                // Update square generator with the new active channel
+                if (squareGenerator != null)
+                    squareGenerator.ActiveChannel = activeChannel;
+
             }
 
             // Refresh the UI to show current settings for the selected channel
@@ -304,7 +319,10 @@ namespace DG2072_USB_Control
 
                     else if (waveform == "SQUARE")
                     {
-                        UpdateDutyCycleValue(DutyCycle, activeChannel);
+                        if (squareGenerator != null)
+                        {
+                            squareGenerator.UpdateDutyCycleValue();
+                        }
                     }
                     else if (waveform == "HARMONIC" && _harmonicsUIController != null)
                     {
@@ -331,29 +349,6 @@ namespace DG2072_USB_Control
             }
         }
         
-        private void UpdateDutyCycleValue(TextBox dutyCycleTextBox, int channel)
-        {
-            try
-            {
-                // Only update if the waveform is Square
-                string currentWaveform = rigolDG2072.SendQuery($":SOUR{channel}:FUNC?").Trim().ToUpper();
-                if (currentWaveform.Contains("SQU"))
-                {
-                    double dutyCycle = rigolDG2072.GetDutyCycle(channel);
-
-                    Dispatcher.Invoke(() =>
-                    {
-                        dutyCycleTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(dutyCycle);
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error updating duty cycle for channel {channel}: {ex.Message}");
-            }
-        }
-
-
         #endregion
 
         #region Auto-Refresh Methods
@@ -593,14 +588,14 @@ namespace DG2072_USB_Control
             });
         }
 
-        private void UpdateSymmetryValue(TextBox symmetryTextBox, int channel)
-        {
-            if (rampGenerator != null)
-            {
-                rampGenerator.ActiveChannel = channel;
-                rampGenerator.UpdateSymmetryValue();
-            }
-        }
+        //private void UpdateSymmetryValue(TextBox symmetryTextBox, int channel)
+        //{
+        //    if (rampGenerator != null)
+        //    {
+        //        rampGenerator.ActiveChannel = channel;
+        //        rampGenerator.UpdateSymmetryValue();
+        //    }
+        //}
 
         private void UpdateWaveformSelection(ComboBox waveformComboBox, int channel)
         {
@@ -957,6 +952,12 @@ namespace DG2072_USB_Control
             // Initialize the ramp generator after UI references are set up
             rampGenerator = new RampGen(rigolDG2072, activeChannel, this);
             rampGenerator.LogEvent += (s, message) => LogMessage(message);
+
+            // Initialize the square generator after UI references are set up
+            squareGenerator = new SquareGen(rigolDG2072, activeChannel, this);
+            squareGenerator.LogEvent += (s, message) => LogMessage(message);
+
+
 
             // After window initialization, use a small delay before auto-connecting
             // This gives the UI time to fully render before connecting
@@ -1638,7 +1639,6 @@ namespace DG2072_USB_Control
             _phaseUpdateTimer.Start();
         }
 
-
         private void ChannelSymmetryTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (rampGenerator != null)
@@ -1650,112 +1650,6 @@ namespace DG2072_USB_Control
             if (rampGenerator != null)
                 rampGenerator.OnSymmetryLostFocus(sender, e);
         }
-
-        //private void ChannelApplyButton_Click(object sender, RoutedEventArgs e)
-        //{
-        //    if (!isConnected) return;
-
-        //    try
-        //    {
-        //        // Get current waveform type
-        //        string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
-
-        //        // CASE 1: PULSE WAVEFORM - Use the dedicated PulseGen class
-        //        if (waveform == "PULSE" && pulseGenerator != null)
-        //        {
-        //            // The pulseGenerator will handle all pulse-specific parameters and validations
-        //            pulseGenerator.ApplyPulseParameters();
-        //        }
-        //        // CASE 2: ALL OTHER WAVEFORMS - Handle normally
-        //        else
-        //        {
-        //            // First adjust the values and units for better display
-        //            if (_frequencyModeActive)
-        //            {
-        //                AdjustFrequencyAndUnit(ChannelFrequencyTextBox, ChannelFrequencyUnitComboBox);
-        //            }
-        //            else
-        //            {
-        //                // For period mode, use PulseGen's adjustment method if available
-        //                if (pulseGenerator != null)
-        //                {
-        //                    pulseGenerator.AdjustPulseTimeAndUnit(PulsePeriod, PulsePeriodUnitComboBox);
-        //                }
-        //            }
-
-        //            AdjustAmplitudeAndUnit(ChannelAmplitudeTextBox, ChannelAmplitudeUnitComboBox);
-
-        //            // Apply based on mode
-        //            if (_frequencyModeActive)
-        //            {
-        //                // Check if frequency value is valid
-        //                if (!double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
-        //                {
-        //                    LogMessage($"Invalid frequency value for CH{activeChannel}");
-        //                    return;
-        //                }
-
-        //                // Convert frequency unit
-        //                string freqUnit = UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-        //                double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-        //                double actualFrequency = frequency * freqMultiplier;
-
-        //                rigolDG2072.SetFrequency(activeChannel, actualFrequency);
-        //            }
-        //            else
-        //            {
-        //                // Check if period value is valid
-        //                if (!double.TryParse(PulsePeriod.Text, out double period))
-        //                {
-        //                    LogMessage($"Invalid period value for CH{activeChannel}");
-        //                    return;
-        //                }
-
-        //                // Convert period unit
-        //                string periodUnit = UnitConversionUtility.GetPeriodUnit(PulsePeriodUnitComboBox);
-        //                double periodMultiplier = UnitConversionUtility.GetPeriodMultiplier(periodUnit);
-        //                double actualPeriod = period * periodMultiplier;
-
-        //                rigolDG2072.SendCommand($"SOURCE{activeChannel}:PERiod {actualPeriod}");
-        //            }
-
-        //            // Apply other parameters (amplitude, offset, phase)
-        //            if (double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude) &&
-        //                double.TryParse(ChannelOffsetTextBox.Text, out double offset) &&
-        //                double.TryParse(ChannelPhaseTextBox.Text, out double phase))
-        //            {
-        //                string ampUnit = UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
-        //                double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-        //                double actualAmplitude = amplitude * ampMultiplier;
-
-        //                rigolDG2072.SetAmplitude(activeChannel, actualAmplitude);
-        //                rigolDG2072.SetOffset(activeChannel, offset);
-        //                rigolDG2072.SetPhase(activeChannel, phase);
-        //            }
-
-        //            // Apply waveform-specific parameters
-        //            if (waveform == "RAMP" && rampGenerator != null)
-        //            {
-        //                rampGenerator.ApplyRampParameters();
-        //            }
-        //            else if (waveform == "SQUARE" && double.TryParse(DutyCycle.Text, out double dutyCycle))
-        //            {
-        //                rigolDG2072.SetDutyCycle(activeChannel, dutyCycle);
-        //                LogMessage($"Applied duty cycle {dutyCycle}% to CH{activeChannel}");
-        //            }
-        //        }
-
-        //        // Refresh the UI to show the actual values from the device
-        //        RefreshChannelSettings();
-        //        LogMessage($"Applied settings to CH{activeChannel}");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        LogMessage($"Error applying settings: {ex.Message}");
-        //        MessageBox.Show($"Error applying settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        //    }
-        //}
-
 
         private void ChannelApplyButton_Click(object sender, RoutedEventArgs e)
         {
@@ -1873,11 +1767,8 @@ namespace DG2072_USB_Control
                     break;
 
                 case "SQUARE":
-                    if (double.TryParse(DutyCycle.Text, out double dutyCycle))
-                    {
-                        rigolDG2072.SetDutyCycle(activeChannel, dutyCycle);
-                        LogMessage($"Applied duty cycle {dutyCycle}% to CH{activeChannel}");
-                    }
+                    if (squareGenerator != null)
+                        squareGenerator.ApplySquareParameters();
                     break;
             }
         }
@@ -2290,37 +2181,14 @@ namespace DG2072_USB_Control
 
         private void ChannelDutyCycleTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (!isConnected) return;
-            if (!double.TryParse(DutyCycle.Text, out double dutyCycle)) return;
-
-            if (_dutyCycleUpdateTimer == null)
-            {
-                _dutyCycleUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _dutyCycleUpdateTimer.Tick += (s, args) =>
-                {
-                    _dutyCycleUpdateTimer.Stop();
-                    if (double.TryParse(DutyCycle.Text, out double duty))
-                    {
-                        rigolDG2072.SetDutyCycle(activeChannel, duty);
-                    }
-                };
-            }
-
-            _dutyCycleUpdateTimer.Stop();
-            _dutyCycleUpdateTimer.Start();
+            if (squareGenerator != null)
+                squareGenerator.OnDutyCycleTextChanged(sender, e);
         }
 
         private void ChannelDutyCycleTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            if (double.TryParse(DutyCycle.Text, out double dutyCycle))
-            {
-                // Ensure value is in valid range
-                dutyCycle = Math.Max(0, Math.Min(100, dutyCycle));
-                DutyCycle.Text = UnitConversionUtility.FormatWithMinimumDecimals(dutyCycle);
-            }
+            if (squareGenerator != null)
+                squareGenerator.OnDutyCycleLostFocus(sender, e);
         }
 
         /// <summary>
@@ -2628,9 +2496,6 @@ namespace DG2072_USB_Control
                 dualToneGen.OnOffsetFrequencyUnitChanged(sender, e);
         }
 
-        #endregion
-
-        #region DualTone
 
         private void RefreshDualToneSettings(int channel)
         {
