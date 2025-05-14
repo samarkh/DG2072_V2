@@ -1313,14 +1313,21 @@ namespace DG2072_USB_Control
                 LogMessage("Switching to arbitrary waveform mode...");
                 try
                 {
-                    // Set the waveform on the device - make sure we send the command directly
-                    rigolDG2072.SendCommand($":SOURCE{activeChannel}:APPLY:USER 1000,5,0,0");
+                    // Get current parameters - just like the sine wave implementation
+                    double frequency = rigolDG2072.GetFrequency(activeChannel);
+                    double amplitude = rigolDG2072.GetAmplitude(activeChannel);
+                    double offset = rigolDG2072.GetOffset(activeChannel);
+                    double phase = rigolDG2072.GetPhase(activeChannel);
+
+                    // Set the waveform on the device using current parameters instead of hardcoded values
+                    rigolDG2072.SendCommand($":SOURCE{activeChannel}:APPLY:USER {frequency},{amplitude},{offset},{phase}");
                     System.Threading.Thread.Sleep(100);
 
                     // Initialize the arbitrary waveform UI
                     if (ArbitraryWaveformComboBox.SelectedItem == null)
                     {
-                        ArbitraryWaveformComboBox.SelectedIndex = 0; // Select the first item (USER)
+                        // Refresh the arbitrary waveform settings 
+                        RefreshArbitraryWaveformSettings(activeChannel);
                     }
 
                     // Only access SelectedItem if it's not null and is the correct type
@@ -2007,10 +2014,19 @@ namespace DG2072_USB_Control
             }
 
             // Handle arbitrary waveform controls visibility
+            // Handle arbitrary waveform controls visibility
             if (ArbitraryWaveformGroupBox != null)
             {
                 ArbitraryWaveformGroupBox.Visibility = isArbitraryWaveform ? Visibility.Visible : Visibility.Collapsed;
+
+                // Hide the Apply button since changes are auto-applied
+                if (ApplyArbitraryWaveformButton != null)
+                {
+                    ApplyArbitraryWaveformButton.Visibility = Visibility.Collapsed;
+                }
             }
+
+
 
             // Handle harmonic-specific controls
             if (HarmonicsGroupBox != null)

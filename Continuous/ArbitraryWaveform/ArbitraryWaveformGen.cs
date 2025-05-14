@@ -86,6 +86,12 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         {
             // Update the available waveforms for the selected category
             LoadArbitraryWaveformsForCategory();
+
+            // If there are waveforms and one is selected, auto-apply
+            if (_waveformComboBox?.Items.Count > 0 && _waveformComboBox.SelectedItem != null)
+            {
+                ApplyArbitraryWaveform();
+            }
         }
 
         public void OnWaveformSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -94,6 +100,9 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
             {
                 string selectedWaveform = _waveformComboBox.SelectedItem.ToString();
                 UpdateArbitraryWaveformParameters(selectedWaveform);
+
+                // Auto-apply the waveform when selection changes
+                ApplyArbitraryWaveform();
             }
         }
 
@@ -159,8 +168,11 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
             TextBox textBox = sender as TextBox;
             if (textBox == null || !double.TryParse(textBox.Text, out double value)) return;
 
-            // Format the value with appropriate number of decimal places using the utility
+            // Format the value with appropriate number of decimal places
             textBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(value, 1);
+
+            // Auto-apply when parameters change
+            ApplyArbitraryWaveform();
         }
 
         public void OnApplyButtonClick(object sender, RoutedEventArgs e)
@@ -200,6 +212,9 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 if (_categoryComboBox.Items.Count > 0)
                 {
                     _categoryComboBox.SelectedIndex = 0;
+
+                    // Add this line to explicitly load waveforms for the selected category
+                    LoadArbitraryWaveformsForCategory();
                 }
             }
             catch (Exception ex)
@@ -310,9 +325,11 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 }
 
                 // Update the waveform info text
+                // Update the waveform info text
                 if (_waveformInfoTextBlock != null)
                 {
-                    _waveformInfoTextBlock.Text = _device.GetArbitraryWaveformInfo(waveformName);
+                    _waveformInfoTextBlock.Text = _device.GetArbitraryWaveformInfo(waveformName) +
+                        "\n\nChanges are applied automatically.";
                 }
             }
             catch (Exception ex)
