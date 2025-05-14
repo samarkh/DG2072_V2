@@ -22,6 +22,7 @@ using DG2072_USB_Control.Continuous.Square;
 using DG2072_USB_Control.Continuous.Sinusoid;
 using DG2072_USB_Control.Continuous.DC;
 using DG2072_USB_Control.Continuous.Noise;
+using DG2072_USB_Control.Continuous.ArbitraryWaveform;
 
 namespace DG2072_USB_Control
 {
@@ -89,6 +90,9 @@ namespace DG2072_USB_Control
         // Noise generator management
         private NoiseGen noiseGenerator;
 
+        // Arbitrary Waveform Generator Management
+        private ArbitraryWaveformGen arbitraryWaveformGen;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -144,6 +148,10 @@ namespace DG2072_USB_Control
                 //update noise generator with the new active channel
                 if (noiseGenerator != null)
                     noiseGenerator.ActiveChannel = activeChannel;
+
+                // Update arbitrary waveform generator with the new active channel
+                if (arbitraryWaveformGen != null)
+                    arbitraryWaveformGen.ActiveChannel = activeChannel;
 
             }
             else
@@ -866,9 +874,6 @@ namespace DG2072_USB_Control
             // Find and store reference to phase panel
             PhaseDockPanel = FindVisualParent<DockPanel>(ChannelPhaseTextBox);
 
-            // Initialize arbitrary waveform controls
-            InitializeArbitraryWaveformControls();
-
             // Initialize frequency/period mode with frequency mode active by default
             _frequencyModeActive = true;
             FrequencyPeriodModeToggle.IsChecked = true;
@@ -901,6 +906,10 @@ namespace DG2072_USB_Control
             // initialize the noise generator after UI references are set up
             noiseGenerator = new NoiseGen(rigolDG2072, activeChannel, this);
             noiseGenerator.LogEvent += (s, message) => LogMessage(message);
+
+            // Initialize the arbitrary waveform generator
+            arbitraryWaveformGen = new ArbitraryWaveformGen(rigolDG2072, activeChannel, this);
+            arbitraryWaveformGen.LogEvent += (s, message) => LogMessage(message);
 
             // After window initialization, use a small delay before auto-connecting
             // This gives the UI time to fully render before connecting
@@ -1843,12 +1852,19 @@ namespace DG2072_USB_Control
         // Update the UpdateWaveformSpecificControls method to use the pulse generator
         private void UpdateWaveformSpecificControls(string waveformType)
         {
+            // Convert to uppercase for case-insensitive comparison
             string waveform = waveformType.ToUpper();
+
+            // Rename "USER" to "ARBITRARY WAVEFORMS" for clarity in code
+            if (waveform == "USER")
+                waveform = "ARBITRARY WAVEFORMS";
+
             bool isPulse = (waveform == "PULSE");
             bool isNoise = (waveform == "NOISE");
             bool isDualTone = (waveform == "DUAL TONE");
             bool isHarmonic = (waveform == "HARMONIC");
             bool isDC = (waveform == "DC");
+            bool isArbitraryWaveform = (waveform == "ARBITRARY WAVEFORMS");
 
             // Use the pulse generator to update pulse controls
             if (pulseGenerator != null)
@@ -1913,7 +1929,7 @@ namespace DG2072_USB_Control
                 // Show/hide pulse-specific controls
                 PulseWidthDockPanel.Visibility = pulseVisibility;
                 PulseRiseTimeDockPanel.Visibility = pulseVisibility;
-                //PulseFallTimeDockPanel.Visibility = pulseVisibility; UpdateWaveformSpecificControls
+                PulseFallTimeDockPanel.Visibility = pulseVisibility;
 
                 // Show/hide the mode toggle
                 if (PulseRateModeDockPanel != null)
@@ -1993,7 +2009,7 @@ namespace DG2072_USB_Control
             // Handle arbitrary waveform controls visibility
             if (ArbitraryWaveformGroupBox != null)
             {
-                ArbitraryWaveformGroupBox.Visibility = (waveform == "USER") ? Visibility.Visible : Visibility.Collapsed;
+                ArbitraryWaveformGroupBox.Visibility = isArbitraryWaveform ? Visibility.Visible : Visibility.Collapsed;
             }
 
             // Handle harmonic-specific controls
@@ -2037,8 +2053,6 @@ namespace DG2072_USB_Control
             }
 
             // DC group box visibility
-            // DC group box visibility
-            // DC group box visibility
             if (DCGroupBox != null)
             {
                 DCGroupBox.Visibility = isDC ? Visibility.Visible : Visibility.Collapsed;
@@ -2076,9 +2090,6 @@ namespace DG2072_USB_Control
                 if (FindVisualParent<DockPanel>(ChannelOffsetTextBox) != null)
                     FindVisualParent<DockPanel>(ChannelOffsetTextBox).Visibility = Visibility.Visible;
             }
-
-
-
         }
 
         private void ChannelDutyCycleTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -2497,47 +2508,10 @@ namespace DG2072_USB_Control
 
         private void RefreshArbitraryWaveformSettings(int channel)
         {
-            try
+            if (arbitraryWaveformGen != null)
             {
-                // Get current arbitrary waveform type
-                string waveformType = rigolDG2072.GetArbitraryWaveformType(channel);
-
-                // Try to get the friendly name and category
-                string friendlyName = rigolDG2072.GetCurrentArbitraryWaveformName(channel);
-                var category = rigolDG2072.GetCurrentArbitraryWaveformCategory(channel);
-
-                Dispatcher.Invoke(() =>
-                {
-                    // Select the correct category in the combo box if found
-                    if (category.HasValue && ArbitraryWaveformCategoryComboBox != null)
-                    {
-                        ArbitraryWaveformCategoryComboBox.SelectedItem = category.Value.ToString();
-                        LoadArbitraryWaveformsForCategory();
-                    }
-
-                    // Select the correct waveform in the combo box if found
-                    if (!string.IsNullOrEmpty(friendlyName) && ArbitraryWaveformComboBox != null)
-                    {
-                        foreach (var item in ArbitraryWaveformComboBox.Items)
-                        {
-                            if (item.ToString() == friendlyName)
-                            {
-                                ArbitraryWaveformComboBox.SelectedItem = item;
-                                break;
-                            }
-                        }
-                    }
-
-                    // Update parameter controls based on selected waveform
-                    if (ArbitraryWaveformComboBox.SelectedItem != null)
-                    {
-                        UpdateArbitraryWaveformParameters(ArbitraryWaveformComboBox.SelectedItem.ToString());
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error refreshing arbitrary waveform settings: {ex.Message}");
+                arbitraryWaveformGen.ActiveChannel = channel;
+                arbitraryWaveformGen.RefreshArbitraryWaveformSettings();
             }
         }
 
@@ -2632,188 +2606,92 @@ namespace DG2072_USB_Control
         // Event handler for parameter text changes
         private void ArbitraryParamTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (!isConnected) return;
-
-            TextBox textBox = sender as TextBox;
-            if (textBox == null || !double.TryParse(textBox.Text, out double value)) return;
-
-            // Get parameter number from Tag
-            if (!int.TryParse(textBox.Tag.ToString(), out int paramNumber)) return;
-
-            // Use a timer to delay the update until user stops typing
-            DispatcherTimer timer = null;
-
-            switch (paramNumber)
-            {
-                case 1:
-                    if (_arbitraryParam1UpdateTimer == null)
-                    {
-                        _arbitraryParam1UpdateTimer = new DispatcherTimer
-                        {
-                            Interval = TimeSpan.FromMilliseconds(500)
-                        };
-                        _arbitraryParam1UpdateTimer.Tick += (s, args) =>
-                        {
-                            _arbitraryParam1UpdateTimer.Stop();
-                            if (double.TryParse(ArbitraryParam1TextBox.Text, out double param))
-                            {
-                                // Update will happen when Apply button is clicked
-                                LogMessage($"Parameter 1 set to {param}");
-                            }
-                        };
-                    }
-                    timer = _arbitraryParam1UpdateTimer;
-                    break;
-
-                case 2:
-                    if (_arbitraryParam2UpdateTimer == null)
-                    {
-                        _arbitraryParam2UpdateTimer = new DispatcherTimer
-                        {
-                            Interval = TimeSpan.FromMilliseconds(500)
-                        };
-                        _arbitraryParam2UpdateTimer.Tick += (s, args) =>
-                        {
-                            _arbitraryParam2UpdateTimer.Stop();
-                            if (double.TryParse(ArbitraryParam2TextBox.Text, out double param))
-                            {
-                                // Update will happen when Apply button is clicked
-                                LogMessage($"Parameter 2 set to {param}");
-                            }
-                        };
-                    }
-                    timer = _arbitraryParam2UpdateTimer;
-                    break;
-            }
-
-            if (timer != null)
-            {
-                timer.Stop();
-                timer.Start();
-            }
+            if (arbitraryWaveformGen != null)
+                arbitraryWaveformGen.OnParameterTextChanged(sender, e);
         }
 
         // Event handler for parameter text box lost focus
         private void ArbitraryParamTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            TextBox textBox = sender as TextBox;
-            if (textBox == null || !double.TryParse(textBox.Text, out double value)) return;
-
-            // Format the value with appropriate number of decimal places
-            textBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(value, 1); // 1 decimal for frequency
+            if (arbitraryWaveformGen != null)
+                arbitraryWaveformGen.OnParameterLostFocus(sender, e);
         }
 
 
         // Event handler for when the arbitrary waveform category changes
         private void ArbitraryWaveformCategoryComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Update the available waveforms for the selected category
-            LoadArbitraryWaveformsForCategory();
+            if (arbitraryWaveformGen != null)
+                arbitraryWaveformGen.OnCategorySelectionChanged(sender, e);
         }
 
-        // Load the ArbitraryWaveformCategory enum values into the category ComboBox
-        private void InitializeArbitraryWaveformControls()
-        {
-            // Clear existing items
-            ArbitraryWaveformCategoryComboBox.Items.Clear();
+        //// Load the ArbitraryWaveformCategory enum values into the category ComboBox
+        //private void InitializeArbitraryWaveformControls()
+        //{
+        //    // Clear existing items
+        //    ArbitraryWaveformCategoryComboBox.Items.Clear();
 
-            // Get all categories from the RigolDG2072 instance
-            var categories = rigolDG2072.GetArbitraryWaveformCategories();
+        //    // Get all categories from the RigolDG2072 instance
+        //    var categories = rigolDG2072.GetArbitraryWaveformCategories();
 
-            // Add each category to the ComboBox
-            foreach (var category in categories)
-            {
-                ArbitraryWaveformCategoryComboBox.Items.Add(category.ToString());
-            }
+        //    // Add each category to the ComboBox
+        //    foreach (var category in categories)
+        //    {
+        //        ArbitraryWaveformCategoryComboBox.Items.Add(category.ToString());
+        //    }
 
-            // Select the first category by default
-            if (ArbitraryWaveformCategoryComboBox.Items.Count > 0)
-            {
-                ArbitraryWaveformCategoryComboBox.SelectedIndex = 0;
-            }
-        }
+        //    // Select the first category by default
+        //    if (ArbitraryWaveformCategoryComboBox.Items.Count > 0)
+        //    {
+        //        ArbitraryWaveformCategoryComboBox.SelectedIndex = 0;
+        //    }
+        //}
 
-        // Load waveforms for the currently selected category
-        private void LoadArbitraryWaveformsForCategory()
-        {
-            // Clear existing items
-            ArbitraryWaveformComboBox.Items.Clear();
+        //// Load waveforms for the currently selected category
+        //private void LoadArbitraryWaveformsForCategory()
+        //{
+        //    // Clear existing items
+        //    ArbitraryWaveformComboBox.Items.Clear();
 
-            // Get the selected category
-            if (ArbitraryWaveformCategoryComboBox.SelectedItem == null)
-                return;
+        //    // Get the selected category
+        //    if (ArbitraryWaveformCategoryComboBox.SelectedItem == null)
+        //        return;
 
-            // Parse the selected category string back to the enum value
-            if (Enum.TryParse(ArbitraryWaveformCategoryComboBox.SelectedItem.ToString(), out RigolDG2072.ArbitraryWaveformCategory selectedCategory))
-            {
-                // Get waveforms for the selected category
-                var waveforms = rigolDG2072.GetArbitraryWaveformNames(selectedCategory);
+        //    // Parse the selected category string back to the enum value
+        //    if (Enum.TryParse(ArbitraryWaveformCategoryComboBox.SelectedItem.ToString(), out RigolDG2072.ArbitraryWaveformCategory selectedCategory))
+        //    {
+        //        // Get waveforms for the selected category
+        //        var waveforms = rigolDG2072.GetArbitraryWaveformNames(selectedCategory);
 
-                // Add each waveform to the ComboBox
-                foreach (var waveform in waveforms)
-                {
-                    ArbitraryWaveformComboBox.Items.Add(waveform);
-                }
+        //        // Add each waveform to the ComboBox
+        //        foreach (var waveform in waveforms)
+        //        {
+        //            ArbitraryWaveformComboBox.Items.Add(waveform);
+        //        }
 
-                // Select the first waveform by default
-                if (ArbitraryWaveformComboBox.Items.Count > 0)
-                {
-                    ArbitraryWaveformComboBox.SelectedIndex = 0;
-                }
-            }
-        }
+        //        // Select the first waveform by default
+        //        if (ArbitraryWaveformComboBox.Items.Count > 0)
+        //        {
+        //            ArbitraryWaveformComboBox.SelectedIndex = 0;
+        //        }
+        //    }
+        //}
 
         // Update the arbitrary waveform info text when a waveform is selected
         private void ArbitraryWaveformComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ArbitraryWaveformComboBox.SelectedItem != null)
-            {
-                string selectedWaveform = ArbitraryWaveformComboBox.SelectedItem.ToString();
-                UpdateArbitraryWaveformParameters(selectedWaveform);
-            }
+            if (arbitraryWaveformGen != null)
+                arbitraryWaveformGen.OnWaveformSelectionChanged(sender, e);
         }
+
 
         // Apply the selected arbitrary waveform
         // Apply the selected arbitrary waveform
         // Apply the selected arbitrary waveform
         private void ApplyArbitraryWaveformButton_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                if (ArbitraryWaveformCategoryComboBox.SelectedItem == null ||
-                    ArbitraryWaveformComboBox.SelectedItem == null)
-                    return;
-
-                // Get the selected category and waveform
-                if (Enum.TryParse(ArbitraryWaveformCategoryComboBox.SelectedItem.ToString(),
-                                  out RigolDG2072.ArbitraryWaveformCategory selectedCategory))
-                {
-                    string selectedArbWaveform = ArbitraryWaveformComboBox.SelectedItem.ToString();
-
-                    // Get current parameters from UI
-                    double frequency = GetFrequencyFromUI();
-                    double amplitude = GetAmplitudeFromUI();
-                    double offset = GetOffsetFromUI();
-                    double phase = GetPhaseFromUI();
-
-                    // Apply the arbitrary waveform
-                    rigolDG2072.SetArbitraryWaveform(activeChannel, selectedCategory, selectedArbWaveform);
-
-                    // Apply basic parameters
-                    rigolDG2072.SetFrequency(activeChannel, frequency);
-                    rigolDG2072.SetAmplitude(activeChannel, amplitude);
-                    rigolDG2072.SetOffset(activeChannel, offset);
-                    rigolDG2072.SetPhase(activeChannel, phase);
-
-                    // Log the operation
-                    LogMessage($"Applied {selectedArbWaveform} arbitrary waveform from {selectedCategory} category to Channel {activeChannel}");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Handle any errors
-                LogMessage($"Error applying arbitrary waveform: {ex.Message}");
-            }
+            if (arbitraryWaveformGen != null)
+                arbitraryWaveformGen.OnApplyButtonClick(sender, e);
         }
 
         private double GetFrequencyFromUI()
