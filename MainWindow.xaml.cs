@@ -273,7 +273,7 @@ namespace DG2072_USB_Control
                     {
                         RefreshDualToneSettings(activeChannel);
                     }
-                    else if (waveform == "USER")
+                    else if (waveform == "USER" || waveform == "ARBITRARY WAVEFORM")
                     {
                         RefreshArbitraryWaveformSettings(activeChannel);
                     }
@@ -364,8 +364,8 @@ namespace DG2072_USB_Control
                 // Now get the currently selected waveform from the UI
                 string currentWaveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
 
-                // For USER waveform, refresh arbitrary settings
-                if (currentWaveform == "USER")
+                // For USER/ARBITRARY WAVEFORM, refresh arbitrary settings
+                if (currentWaveform == "USER" || currentWaveform == "ARBITRARY WAVEFORM")
                 {
                     // Make sure the arbitrary waveform group is visible
                     ArbitraryWaveformGroupBox.Visibility = Visibility.Visible;
@@ -1855,8 +1855,8 @@ namespace DG2072_USB_Control
             // Convert to uppercase for case-insensitive comparison
             string waveform = waveformType.ToUpper();
 
-            // Rename "USER" to "ARBITRARY WAVEFORMS" for clarity in code
-            if (waveform == "USER")
+            // Handle both "USER" and "ARBITRARY WAVEFORM" as the same thing
+            if (waveform == "USER" || waveform == "ARBITRARY WAVEFORM")
                 waveform = "ARBITRARY WAVEFORMS";
 
             bool isPulse = (waveform == "PULSE");
