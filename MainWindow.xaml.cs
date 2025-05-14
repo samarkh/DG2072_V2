@@ -1308,7 +1308,7 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            else if (waveform == "USER")
+            else if (waveform == "ARBITRARY WAVEFORM")
             {
                 LogMessage("Switching to arbitrary waveform mode...");
                 try
@@ -2537,72 +2537,6 @@ namespace DG2072_USB_Control
 
         #region Arbitrary Waveform Handlers
 
-        // Fields for arbitrary waveform parameters update timers
-        private DispatcherTimer _arbitraryParam1UpdateTimer;
-        private DispatcherTimer _arbitraryParam2UpdateTimer;
-
-
-        // Method to update parameter display based on waveform type
-        private void UpdateArbitraryWaveformParameters(string waveformName)
-        {
-            // This would be customized based on which parameters are relevant for each waveform
-            // For this example, we'll keep it simple with generic parameters
-            // In a full implementation, you might show/hide specific controls for each waveform type
-
-            // Reset parameters to defaults
-            ArbitraryParam1TextBox.Text = "1.0";
-            ArbitraryParam2TextBox.Text = "1.0";
-
-            // Set the parameter labels and units based on waveform type
-            switch (waveformName.ToUpper())
-            {
-                case "SINC":
-                    WaveformParametersGroup.Visibility = Visibility.Visible;
-                    ArbitraryParam1DockPanel.Visibility = Visibility.Visible;
-                    ArbitraryParam2DockPanel.Visibility = Visibility.Collapsed;
-                    ((Label)ArbitraryParam1DockPanel.Children[0]).Content = "Zero Crossings:";
-                    ArbitraryParam1UnitTextBlock.Text = "";
-                    break;
-
-                case "GAUSSIAN":
-                case "LORENTZ":
-                    WaveformParametersGroup.Visibility = Visibility.Visible;
-                    ArbitraryParam1DockPanel.Visibility = Visibility.Visible;
-                    ArbitraryParam2DockPanel.Visibility = Visibility.Visible;
-                    ((Label)ArbitraryParam1DockPanel.Children[0]).Content = "Width:";
-                    ((Label)ArbitraryParam2DockPanel.Children[0]).Content = "Center:";
-                    ArbitraryParam1UnitTextBlock.Text = "%";
-                    ArbitraryParam2UnitTextBlock.Text = "%";
-                    break;
-
-                case "EXPONENTIAL RISE":
-                case "EXPONENTIAL FALL":
-                    WaveformParametersGroup.Visibility = Visibility.Visible;
-                    ArbitraryParam1DockPanel.Visibility = Visibility.Visible;
-                    ArbitraryParam2DockPanel.Visibility = Visibility.Collapsed;
-                    ((Label)ArbitraryParam1DockPanel.Children[0]).Content = "Time Constant:";
-                    ArbitraryParam1UnitTextBlock.Text = "%";
-                    break;
-
-                case "CHIRP":
-                    WaveformParametersGroup.Visibility = Visibility.Visible;
-                    ArbitraryParam1DockPanel.Visibility = Visibility.Visible;
-                    ArbitraryParam2DockPanel.Visibility = Visibility.Visible;
-                    ((Label)ArbitraryParam1DockPanel.Children[0]).Content = "Start Freq:";
-                    ((Label)ArbitraryParam2DockPanel.Children[0]).Content = "End Freq:";
-                    ArbitraryParam1UnitTextBlock.Text = "Hz";
-                    ArbitraryParam2UnitTextBlock.Text = "Hz";
-                    break;
-
-                default:
-                    // For other waveforms, hide the parameter controls
-                    WaveformParametersGroup.Visibility = Visibility.Collapsed;
-                    ArbitraryParam1DockPanel.Visibility = Visibility.Collapsed;
-                    ArbitraryParam2DockPanel.Visibility = Visibility.Collapsed;
-                    break;
-            }
-        }
-
         // Event handler for parameter text changes
         private void ArbitraryParamTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -2617,65 +2551,12 @@ namespace DG2072_USB_Control
                 arbitraryWaveformGen.OnParameterLostFocus(sender, e);
         }
 
-
         // Event handler for when the arbitrary waveform category changes
         private void ArbitraryWaveformCategoryComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (arbitraryWaveformGen != null)
                 arbitraryWaveformGen.OnCategorySelectionChanged(sender, e);
         }
-
-        //// Load the ArbitraryWaveformCategory enum values into the category ComboBox
-        //private void InitializeArbitraryWaveformControls()
-        //{
-        //    // Clear existing items
-        //    ArbitraryWaveformCategoryComboBox.Items.Clear();
-
-        //    // Get all categories from the RigolDG2072 instance
-        //    var categories = rigolDG2072.GetArbitraryWaveformCategories();
-
-        //    // Add each category to the ComboBox
-        //    foreach (var category in categories)
-        //    {
-        //        ArbitraryWaveformCategoryComboBox.Items.Add(category.ToString());
-        //    }
-
-        //    // Select the first category by default
-        //    if (ArbitraryWaveformCategoryComboBox.Items.Count > 0)
-        //    {
-        //        ArbitraryWaveformCategoryComboBox.SelectedIndex = 0;
-        //    }
-        //}
-
-        //// Load waveforms for the currently selected category
-        //private void LoadArbitraryWaveformsForCategory()
-        //{
-        //    // Clear existing items
-        //    ArbitraryWaveformComboBox.Items.Clear();
-
-        //    // Get the selected category
-        //    if (ArbitraryWaveformCategoryComboBox.SelectedItem == null)
-        //        return;
-
-        //    // Parse the selected category string back to the enum value
-        //    if (Enum.TryParse(ArbitraryWaveformCategoryComboBox.SelectedItem.ToString(), out RigolDG2072.ArbitraryWaveformCategory selectedCategory))
-        //    {
-        //        // Get waveforms for the selected category
-        //        var waveforms = rigolDG2072.GetArbitraryWaveformNames(selectedCategory);
-
-        //        // Add each waveform to the ComboBox
-        //        foreach (var waveform in waveforms)
-        //        {
-        //            ArbitraryWaveformComboBox.Items.Add(waveform);
-        //        }
-
-        //        // Select the first waveform by default
-        //        if (ArbitraryWaveformComboBox.Items.Count > 0)
-        //        {
-        //            ArbitraryWaveformComboBox.SelectedIndex = 0;
-        //        }
-        //    }
-        //}
 
         // Update the arbitrary waveform info text when a waveform is selected
         private void ArbitraryWaveformComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2693,49 +2574,6 @@ namespace DG2072_USB_Control
             if (arbitraryWaveformGen != null)
                 arbitraryWaveformGen.OnApplyButtonClick(sender, e);
         }
-
-        private double GetFrequencyFromUI()
-        {
-            if (double.TryParse(ChannelFrequencyTextBox.Text, out double frequency))
-            {
-                string freqUnit = Services.UnitConversionUtility.GetFrequencyUnit(ChannelFrequencyUnitComboBox);
-                double multiplier = Services.UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-                return frequency * multiplier;
-            }
-            return 1000.0; // Default 1kHz
-        }
-
-        private double GetAmplitudeFromUI()
-        {
-            if (double.TryParse(ChannelAmplitudeTextBox.Text, out double amplitude))
-            {
-                string ampUnit = Services.UnitConversionUtility.GetAmplitudeUnit(ChannelAmplitudeUnitComboBox);
-                double multiplier = Services.UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                return amplitude * multiplier;
-            }
-            return 1.0; // Default 1Vpp
-        }
-
-        private double GetOffsetFromUI()
-        {
-            if (double.TryParse(ChannelOffsetTextBox.Text, out double offset))
-            {
-                return offset;
-            }
-            return 0.0; // Default 0V
-        }
-
-        private double GetPhaseFromUI()
-        {
-            if (double.TryParse(ChannelPhaseTextBox.Text, out double phase))
-            {
-                return phase;
-            }
-            return 0.0; // Default 0°
-        }
-
-        // Helper method for formatting values with appropriate decimal places
-
 
         #endregion
 

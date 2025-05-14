@@ -62,7 +62,7 @@
                                         <ComboBoxItem Content="Noise"/>
                                         <ComboBoxItem Content="Dual Tone"/>
                                         <ComboBoxItem Content="Harmonic"/>
-                                        <ComboBoxItem Content="User"/>
+                                        <ComboBoxItem Content="Arbitrary Waveform"/>
                                         <ComboBoxItem Content="DC"/>
                                     </ComboBox>
                                 </DockPanel>

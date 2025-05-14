@@ -421,6 +421,7 @@ namespace DG2072_USB_Control
                 case "NOISE": return "NOIS";
                 case "DUAL TONE": return "DUALTONE";
                 case "HARMONIC": return "SIN"; // Harmonics are based on sine waves
+                case "ARBITRARY WAVEFORM": return "USER";
                 default: return waveform.ToUpper();
             }
         }
