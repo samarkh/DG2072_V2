@@ -138,6 +138,10 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform.Descriptions
 
                 default:
                     return "Use the frequency, amplitude, offset and phase controls to adjust the basic characteristics.";
+                    //return "Common Applications:";
+
+
+
             }
         }
 

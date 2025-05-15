@@ -529,15 +529,6 @@ namespace DG2072_USB_Control
             });
         }
 
-        //private void UpdateSymmetryValue(TextBox symmetryTextBox, int channel)
-        //{
-        //    if (rampGenerator != null)
-        //    {
-        //        rampGenerator.ActiveChannel = channel;
-        //        rampGenerator.UpdateSymmetryValue();
-        //    }
-        //}
-
         private void UpdateWaveformSelection(ComboBox waveformComboBox, int channel)
         {
             try
@@ -557,9 +548,29 @@ namespace DG2072_USB_Control
                 if (currentWaveform == "PULS") currentWaveform = "PULSE";
                 if (currentWaveform == "RAMP") currentWaveform = "RAMP";
                 if (currentWaveform == "NOIS") currentWaveform = "NOISE";
-                if (currentWaveform == "USER") currentWaveform = "USER";
+                if (currentWaveform == "USER") currentWaveform = "ARBITRARY WAVEFORM";
                 if (currentWaveform == "HARM") currentWaveform = "HARMONIC";
                 if (currentWaveform == "DUAL") currentWaveform = "DUAL TONE";
+
+                // Check if this is an arbitrary waveform
+                bool isArbitraryWaveform = false;
+                var waveformInfo = rigolDG2072.FindArbitraryWaveformByScpiCommand(currentWaveform);
+
+                if (waveformInfo.HasValue)
+                {
+                    isArbitraryWaveform = true;
+                    LogMessage($"Detected arbitrary waveform: {waveformInfo.Value.FriendlyName} from category {waveformInfo.Value.Category}");
+
+                    // Store the detected waveform info for later use in ArbitraryWaveformGen
+                    rigolDG2072.LastDetectedArbitraryWaveform = waveformInfo.Value;
+                }
+
+                // If it's an arbitrary waveform but not already recognized as USER/ARBITRARY WAVEFORM, 
+                // treat it as ARBITRARY WAVEFORM for UI selection
+                if (isArbitraryWaveform && currentWaveform != "ARBITRARY WAVEFORM" && currentWaveform != "USER")
+                {
+                    currentWaveform = "ARBITRARY WAVEFORM";
+                }
 
                 Dispatcher.Invoke(() =>
                 {
@@ -593,6 +604,23 @@ namespace DG2072_USB_Control
                         }
                     }
 
+                    // Special handling for USER/ARBITRARY WAVEFORM
+                    // If currentWaveform is an arbitrary waveform and we haven't found it yet,
+                    // try to select the "Arbitrary Waveform" option
+                    if (!found && isArbitraryWaveform)
+                    {
+                        foreach (ComboBoxItem item in waveformComboBox.Items)
+                        {
+                            if (item.Content.ToString().ToUpper() == "ARBITRARY WAVEFORM")
+                            {
+                                waveformComboBox.SelectedItem = item;
+                                found = true;
+                                LogMessage($"Selected Arbitrary Waveform for {currentWaveform}");
+                                break;
+                            }
+                        }
+                    }
+
                     // If still not found, log a warning
                     if (!found)
                     {
@@ -607,6 +635,14 @@ namespace DG2072_USB_Control
 
                     // Make sure to update waveform-specific controls based on selection
                     UpdateWaveformSpecificControls(((ComboBoxItem)waveformComboBox.SelectedItem).Content.ToString());
+
+                    // If it's an arbitrary waveform, refresh the arbitrary waveform settings
+                    // This must happen AFTER the main waveform type is selected in the UI
+                    if (currentWaveform == "ARBITRARY WAVEFORM" || isArbitraryWaveform)
+                    {
+                        LogMessage("Refreshing arbitrary waveform settings based on detected waveform");
+                        RefreshArbitraryWaveformSettings(channel);
+                    }
                 });
             }
             catch (Exception ex)
@@ -614,7 +650,6 @@ namespace DG2072_USB_Control
                 LogMessage($"Error updating waveform selection for channel {channel}: {ex.Message}");
             }
         }
-
         private void UpdateFrequencyValue(TextBox freqTextBox, ComboBox unitComboBox, int channel)
         {
             try

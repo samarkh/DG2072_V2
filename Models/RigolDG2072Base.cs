@@ -127,6 +127,8 @@ namespace DG2072_USB_Control
             }
         }
 
+        public (ArbitraryWaveformCategory Category, string FriendlyName)? LastDetectedArbitraryWaveform { get; set; }
+
         public RigolDG2072()
         {
             visaManager = new VisaManager();
@@ -595,8 +597,6 @@ namespace DG2072_USB_Control
             SendCommand($"SOURCE{channel}:HARM:STA {(state ? "ON" : "OFF")}");
         }
 
-
-
         // Improved safe method for harmonic state checking
         public bool GetHarmonicState(int channel)
         {
@@ -785,9 +785,6 @@ namespace DG2072_USB_Control
                 ApplyWaveform(channel, waveform, frequency, amplitude, offset, phase);
             }
         }
-
-
-
 
 
         protected void ValidateChannel(int channel)
@@ -1821,6 +1818,72 @@ namespace DG2072_USB_Control
 
             return waveformName; // Return the original name if no description is found
         }
+
+
+
+        /// <summary>
+        /// Gets the SCPI command for a specific arbitrary waveform
+        /// </summary>
+        /// <param name="category">The category of the arbitrary waveform</param>
+        /// <param name="waveformName">The name of the arbitrary waveform</param>
+        /// <returns>The SCPI command for the specified waveform</returns>
+        public string GetScpiCommandForArbitraryWaveform(ArbitraryWaveformCategory category, string waveformName)
+        {
+            // Check if the category exists
+            if (!_arbitraryWaveforms.ContainsKey(category))
+                return waveformName.ToUpper(); // Default fallback
+
+            // Check if the waveform exists in the category
+            if (_arbitraryWaveforms[category].ContainsKey(waveformName))
+                return _arbitraryWaveforms[category][waveformName];
+
+            // If not found, return the original name as fallback
+            return waveformName.ToUpper();
+        }
+
+        /// <summary>
+        /// Searches all categories to find the SCPI command for a waveform name
+        /// </summary>
+        /// <param name="waveformName">The name of the arbitrary waveform</param>
+        /// <returns>The SCPI command for the specified waveform if found, otherwise the original name</returns>
+        public string FindScpiCommandForArbitraryWaveform(string waveformName)
+        {
+            foreach (var category in _arbitraryWaveforms.Keys)
+            {
+                if (_arbitraryWaveforms[category].ContainsKey(waveformName))
+                    return _arbitraryWaveforms[category][waveformName];
+            }
+
+            return waveformName.ToUpper(); // Default fallback
+        }
+
+        /// <summary>
+        /// Finds the category and friendly name for a given SCPI waveform command
+        /// </summary>
+        /// <param name="scpiCommand">The SCPI command string</param>
+        /// <returns>A tuple with the category and friendly name, or null if not found</returns>
+        public (ArbitraryWaveformCategory Category, string FriendlyName)? FindArbitraryWaveformByScpiCommand(string scpiCommand)
+        {
+            // Normalize the input
+            string normalizedCommand = scpiCommand.Trim().ToUpper();
+
+            // Search all categories
+            foreach (var category in _arbitraryWaveforms.Keys)
+            {
+                // Search all waveforms in this category
+                foreach (var kvp in _arbitraryWaveforms[category])
+                {
+                    if (kvp.Value.ToUpper() == normalizedCommand)
+                    {
+                        return (category, kvp.Key);
+                    }
+                }
+            }
+
+            // Not found
+            return null;
+        }
+
 
         /// <summary>
         /// Gets all arbitrary waveform categories

@@ -105,7 +105,20 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         {
             if (_waveformComboBox?.SelectedItem != null)
             {
-                string selectedWaveform = _waveformComboBox.SelectedItem.ToString();
+                string selectedWaveform;
+
+                // Check if the selected item is a ComboBoxItem
+                if (_waveformComboBox.SelectedItem is ComboBoxItem comboBoxItem)
+                {
+                    // Use Tag if available, otherwise fall back to Content
+                    selectedWaveform = comboBoxItem.Tag?.ToString() ?? comboBoxItem.Content.ToString();
+                }
+                else
+                {
+                    // Fall back to the original behavior
+                    selectedWaveform = _waveformComboBox.SelectedItem.ToString();
+                }
+
                 UpdateArbitraryWaveformParameters(selectedWaveform);
 
                 // Auto-apply the waveform when selection changes
@@ -250,10 +263,18 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     // Get waveforms for the selected category
                     var waveforms = _device.GetArbitraryWaveformNames(selectedCategory);
 
-                    // Add each waveform to the ComboBox
+                    // Add each waveform to the ComboBox with a descriptive name
                     foreach (var waveform in waveforms)
                     {
-                        _waveformComboBox.Items.Add(waveform);
+                        string descriptiveName = _device.GetArbitraryWaveformDescription(waveform);
+
+                        // Create a ComboBoxItem with the descriptive name as Content
+                        // and the original code as Tag for reference when sending to device
+                        ComboBoxItem item = new ComboBoxItem();
+                        item.Content = descriptiveName;
+                        item.Tag = waveform;  // Store original code
+
+                        _waveformComboBox.Items.Add(item);
                     }
 
                     // Select the first waveform by default
@@ -325,6 +346,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         }
 
         // Apply the arbitrary waveform to the device
+        // Apply the arbitrary waveform to the device
         private void ApplyArbitraryWaveform()
         {
             try
@@ -333,11 +355,30 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     _waveformComboBox?.SelectedItem == null)
                     return;
 
-                // Get the selected category and waveform
+                // Get the selected category
                 if (Enum.TryParse(_categoryComboBox.SelectedItem.ToString(),
                                   out RigolDG2072.ArbitraryWaveformCategory selectedCategory))
                 {
-                    string selectedArbWaveform = _waveformComboBox.SelectedItem.ToString();
+                    // Extract the original waveform code from the ComboBoxItem
+                    string selectedArbWaveform;
+
+                    // Check if the selected item is a ComboBoxItem (which it should be after our changes)
+                    if (_waveformComboBox.SelectedItem is ComboBoxItem comboBoxItem)
+                    {
+                        // Get the original code from Tag
+                        selectedArbWaveform = comboBoxItem.Tag?.ToString();
+
+                        // If Tag is null, fall back to Content (though this shouldn't happen)
+                        if (string.IsNullOrEmpty(selectedArbWaveform))
+                        {
+                            selectedArbWaveform = comboBoxItem.Content.ToString();
+                        }
+                    }
+                    else
+                    {
+                        // Fall back to the old behavior if somehow it's not a ComboBoxItem
+                        selectedArbWaveform = _waveformComboBox.SelectedItem.ToString();
+                    }
 
                     // Get current parameters from UI
                     double frequency = GetFrequencyFromUI();
@@ -473,7 +514,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 string waveformType = _device.GetArbitraryWaveformType(_activeChannel);
 
                 // Try to get the friendly name and category
-                string friendlyName = _device.GetCurrentArbitraryWaveformName(_activeChannel);
+                string deviceWaveformName = _device.GetCurrentArbitraryWaveformName(_activeChannel);
                 var category = _device.GetCurrentArbitraryWaveformCategory(_activeChannel);
 
                 // Select the correct category in the combo box if found
@@ -484,11 +525,19 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 }
 
                 // Select the correct waveform in the combo box if found
-                if (!string.IsNullOrEmpty(friendlyName) && _waveformComboBox != null)
+                if (!string.IsNullOrEmpty(deviceWaveformName) && _waveformComboBox != null)
                 {
+                    // Look for ComboBoxItem with matching Tag (original waveform code)
                     foreach (var item in _waveformComboBox.Items)
                     {
-                        if (item.ToString() == friendlyName)
+                        if (item is ComboBoxItem comboBoxItem &&
+                            comboBoxItem.Tag?.ToString() == deviceWaveformName)
+                        {
+                            _waveformComboBox.SelectedItem = item;
+                            break;
+                        }
+                        // Fallback to old behavior if Tag isn't set
+                        else if (item.ToString() == deviceWaveformName)
                         {
                             _waveformComboBox.SelectedItem = item;
                             break;
@@ -499,7 +548,20 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 // Update parameter controls based on selected waveform
                 if (_waveformComboBox?.SelectedItem != null)
                 {
-                    string selectedWaveform = _waveformComboBox.SelectedItem.ToString();
+                    string selectedWaveform;
+
+                    // Check if the selected item is a ComboBoxItem
+                    if (_waveformComboBox.SelectedItem is ComboBoxItem comboBoxItem)
+                    {
+                        // Use Tag if available, otherwise fall back to Content
+                        selectedWaveform = comboBoxItem.Tag?.ToString() ?? comboBoxItem.Content.ToString();
+                    }
+                    else
+                    {
+                        // Fall back to the original behavior
+                        selectedWaveform = _waveformComboBox.SelectedItem.ToString();
+                    }
+
                     UpdateArbitraryWaveformParameters(selectedWaveform);
                 }
 
