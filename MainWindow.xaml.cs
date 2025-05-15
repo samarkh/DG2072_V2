@@ -63,7 +63,7 @@ namespace DG2072_USB_Control
         private double frequencyRatio = 2.0; // Default frequency ratio (harmonic)
 
         private DockPanel DCVoltageDockPanel;
-        private DispatcherTimer _dcVoltageUpdateTimer;
+        
 
         // Harmonics management
         private HarmonicsManager _harmonicsManager;

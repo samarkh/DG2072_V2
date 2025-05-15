@@ -744,13 +744,27 @@ Center = (F1 + F2)/2, Offset = F2 - F1.
                                         </GroupBox>
 
                                         <!-- Waveform Information -->
-                                        <TextBlock x:Name="ArbitraryWaveformInfoTextBlock" 
+                                        <!-- Waveform Information with improved layout -->
+                                        <!-- Waveform Information with improved layout -->
+                                        <!-- Waveform Information with improved layout -->
+                                        <GroupBox Header="Waveform Information" Margin="0,10,0,0">
+                                            <StackPanel>
+                                                <!-- Main description text -->
+                                                <TextBlock x:Name="ArbitraryWaveformInfoTextBlock" 
                    TextWrapping="Wrap" 
                    Margin="0,10,0,0" 
-                   Foreground="#FF505050" 
-                   FontStyle="Italic">
-            Arbitrary waveforms allow you to select from predefined waveform patterns. Select a waveform type above to apply it.
-                                        </TextBlock>
+                   Foreground="#FF505050"/>
+
+                                                <!-- Applications section with a separator -->
+                                                <Separator Margin="0,10,0,5"/>
+
+                                                <!-- Applications content (with the label from description) -->
+                                                <TextBlock x:Name="WaveformApplicationsTextBlock" 
+                   TextWrapping="Wrap" 
+                   Margin="0,5,0,0"
+                   Foreground="#FF505050"/>
+                                            </StackPanel>
+                                        </GroupBox>
 
                                         <!-- Apply Button for Arbitrary Waveform -->
                                         <Button x:Name="ApplyArbitraryWaveformButton" 
