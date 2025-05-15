@@ -498,21 +498,43 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     }
                 }
 
+                // Get the currently selected waveform
+                string selectedWaveform = _waveformComboBox.SelectedItem?.ToString();
+
                 // Update parameter controls based on selected waveform
-                if (_waveformInfoTextBlock != null)
+                if (_waveformInfoTextBlock != null && !string.IsNullOrEmpty(selectedWaveform))
                 {
-                    // Get description parts from ArbitraryWaveformDescriptions
-                    string basicInfo = Continuous.ArbitraryWaveform.Descriptions.ArbitraryWaveformDescriptions.GetBasicInfo(waveformName);
-                    string paramInfo = Continuous.ArbitraryWaveform.Descriptions.ArbitraryWaveformDescriptions.GetParameterInfo(waveformName);
-                    string applicationInfo = Continuous.ArbitraryWaveform.Descriptions.ArbitraryWaveformDescriptions.GetApplicationInfo(waveformName);
 
-                    // Set main info text (without applications)
-                    _waveformInfoTextBlock.Text = basicInfo + "\n\n" + paramInfo + "\n\nChanges are applied automatically.";
+                    string fullDescription = ArbitraryWaveformDescriptions.GetDetailedDescription(selectedWaveform);
+                    // Split description at "Applications:" if present
+                    int appIndex = fullDescription.IndexOf("Applications:");
 
-                    // Set applications text (including the header)
-                    if (_waveformApplicationsTextBlock != null)
+                    if (appIndex > 0)
                     {
-                        _waveformApplicationsTextBlock.Text = "Common Applications:\n" + applicationInfo;
+                        // Get main info (everything before "Applications:")
+                        string mainInfo = fullDescription.Substring(0, appIndex).Trim();
+
+                        // Get applications info
+                        string applicationsPart = fullDescription.Substring(appIndex).Trim();
+
+                        // Set the separated texts
+                        _waveformInfoTextBlock.Text = mainInfo + "\n\nChanges are applied automatically.";
+
+                        if (_waveformApplicationsTextBlock != null)
+                        {
+                            _waveformApplicationsTextBlock.Text = applicationsPart;
+                        }
+                    }
+                    else
+                    {
+                        // No applications section, just use the whole text
+                        _waveformInfoTextBlock.Text = fullDescription +
+                            "\n\nChanges are applied automatically.";
+
+                        if (_waveformApplicationsTextBlock != null)
+                        {
+                            _waveformApplicationsTextBlock.Text = "";
+                        }
                     }
                 }
 
@@ -523,6 +545,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 Log($"Error refreshing arbitrary waveform settings: {ex.Message}");
             }
         }
+
 
         #endregion
     }
