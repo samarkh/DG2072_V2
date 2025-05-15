@@ -64,7 +64,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
 
 
             _waveformApplicationsTextBlock = mainWindow.FindName("WaveformApplicationsTextBlock") as TextBlock;
-            _waveformInfoTextBlock = mainWindow.FindName("WaveformInfoTextBlock") as TextBlock;
+            //_waveformInfoTextBlock = mainWindow.FindName("WaveformInfoTextBlock") as TextBlock;
 
 
 
@@ -289,7 +289,9 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 if (_waveformInfoTextBlock != null)
                 {
                     // Get comprehensive description from the device
-                    string fullDescription = _device.GetArbitraryWaveformInfo(waveformName);
+                    //string fullDescription = _device.GetArbitraryWaveformInfo(waveformName);
+                    string fullDescription = ArbitraryWaveformDescriptions.GetDetailedDescription(waveformName);
+
 
                     // Split description at "Applications:" if present
                     int appIndex = fullDescription.IndexOf("Applications:");

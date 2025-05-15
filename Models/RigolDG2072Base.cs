@@ -9,6 +9,7 @@ namespace DG2072_USB_Control
     public partial class RigolDG2072 : ILogProvider
     {
         private readonly VisaManager visaManager;
+       
         private const string DefaultResourceName = "USB0::0x1AB1::0x0644::DG2P224100508::INSTR";
 
         public event EventHandler<string> LogEvent;
@@ -71,7 +72,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
         public void SetSymmetry(int channel, double symmetry)
         {
             try
@@ -86,7 +86,6 @@ namespace DG2072_USB_Control
                 LogEvent?.Invoke(this, $"Error setting symmetry for channel {channel}: {ex.Message}");
             }
         }
-
 
         public void EnableHarmonics(int channel, bool enabled, Dictionary<int, double> amplitudes = null, Dictionary<int, double> phases = null)
         {
