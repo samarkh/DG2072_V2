@@ -38,9 +38,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
-        // Step 6: Add these methods to the RigolDG2072 class in Models/RigolDG2072Base.cs
-
         public double GetDutyCycle(int channel)
         {
             try
@@ -178,7 +175,6 @@ namespace DG2072_USB_Control
             return visaManager.SendQuery($"OUTPUT{channel}?");
         }
 
-
         /// <summary>
         /// Sets the period for any waveform
         /// </summary>
@@ -199,7 +195,6 @@ namespace DG2072_USB_Control
                 Log($"Set CH{channel} period to {period} s using SOURCE:PERiod command directly");
             }
         }
-
 
         /// <summary>
         /// Gets the period for any waveform
@@ -234,17 +229,12 @@ namespace DG2072_USB_Control
             }
         }
 
-
-
-
         public void SetWaveform(int channel, string waveform)
         {
             ValidateChannel(channel);
             visaManager.SendCommand($"SOURCE{channel}:APPLY:{MapWaveformToScpiCommand(waveform)}");
         }
 
-        // Updated SetFrequency method to use the correct SCPI command
-        // Similarly, ensure we're keeping the frequency command direct
         public void SetFrequency(int channel, double frequency)
         {
             ValidateChannel(channel);
@@ -254,8 +244,6 @@ namespace DG2072_USB_Control
             Log($"Set CH{channel} frequency to {frequency} Hz using SOURCE:FREQuency command directly");
         }
 
-
-        // Updated GetFrequency method to use the correct SCPI command
         public double GetFrequency(int channel)
         {
             ValidateChannel(channel);
@@ -286,6 +274,7 @@ namespace DG2072_USB_Control
             //Log($"Query: {query}, Response: {response}");
             return response;
         }
+ 
         public void SetAmplitude(int channel, double amplitude)
         {
             ValidateChannel(channel);
@@ -302,9 +291,6 @@ namespace DG2072_USB_Control
             }
             return 0.0;
         }
-
-
-
 
         public void SetOffset(int channel, double offset)
         {
@@ -346,11 +332,6 @@ namespace DG2072_USB_Control
             visaManager.SendCommand($"SOURCE{channel}:APPLY:{MapWaveformToScpiCommand(waveform)} {frequency},{amplitude},{offset},{phase}");
         }
 
-        // 1. First, update the ApplyDualToneWaveform method in RigolDG2072Base.cs:
-        // PART 1: Add to RigolDG2072Base.cs (after the ApplyWaveform method)
-        // Step 2: Add Dual Tone mapping in RigolDG2072Base.cs
-        // Modify the MapWaveformToScpiCommand method to include Dual Tone mapping:
-        // Updated ApplyDualToneWaveform method for RigolDG2072Base.cs
         public void ApplyDualToneWaveform(int channel, Dictionary<string, object> parameters)
         {
             try
@@ -425,7 +406,7 @@ namespace DG2072_USB_Control
                 default: return waveform.ToUpper();
             }
         }
-        // Add this diagnostic method to the RigolDG2072 class
+      
         public void QueryDualToneCapabilities(int channel)
         {
             try
@@ -1473,7 +1454,6 @@ namespace DG2072_USB_Control
     {
         ArbitraryWaveformCategory.Engineering, new Dictionary<string, string>
         {
-            { "AM", "AM" },
             { "AttALT", "ATTALT" },
             { "BandLim", "BANDLIMITED" },
             { "Bworth", "BUTTERWORTH" },
@@ -1486,8 +1466,6 @@ namespace DG2072_USB_Control
             { "Pahcur", "PAHCUR" },
             { "CWPulse", "CWPULSE" },
             { "Dischar", "NIMHDISCHARGE" },
-            { "DualTone", "DUALTONE" },
-            { "FM", "FM" },
             { "AmpALT", "AMPALT" },
             { "Gamma", "GAMMA" },
             { "GateVibr", "GATEVIBR" },
@@ -1499,10 +1477,8 @@ namespace DG2072_USB_Control
             { "MCNoise", "MCNOISE" },
             { "NPulse", "NPULSE" },
             { "NegRamp", "NEGRAMP" },
-            { "PM", "PM" },
             { "PPulse", "PPULSE" },
             { "Ripple", "RIPPLE" },
-            { "PWM", "PWM" },
             { "Quake", "QUAKE" },
             { "Radar", "RADAR" },
             { "RouHalf", "ROUNDHALF" },
