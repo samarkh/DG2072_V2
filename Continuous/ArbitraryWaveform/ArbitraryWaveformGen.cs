@@ -30,6 +30,8 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         private readonly Label _param1Label;
         private readonly Label _param2Label;
         private readonly Button _applyButton;
+        private readonly TextBlock _waveformApplicationsTextBlock;
+        
 
         // Update timers for debouncing
         private DispatcherTimer _param1UpdateTimer;
@@ -47,15 +49,22 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
             // Initialize UI references
             _categoryComboBox = mainWindow.FindName("ArbitraryWaveformCategoryComboBox") as ComboBox;
             _waveformComboBox = mainWindow.FindName("ArbitraryWaveformComboBox") as ComboBox;
-            _param1TextBox = mainWindow.FindName("ArbitraryParam1TextBox") as TextBox;
-            _param2TextBox = mainWindow.FindName("ArbitraryParam2TextBox") as TextBox;
+            _param1TextBox =    mainWindow.FindName("ArbitraryParam1TextBox") as TextBox;
+            _param2TextBox =    mainWindow.FindName("ArbitraryParam2TextBox") as TextBox;
             _param1UnitTextBlock = mainWindow.FindName("ArbitraryParam1UnitTextBlock") as TextBlock;
-            _param2UnitTextBlock = mainWindow.FindName("ArbitraryParam2UnitTextBlock") as TextBlock;
-            _waveformInfoTextBlock = mainWindow.FindName("ArbitraryWaveformInfoTextBlock") as TextBlock;
-            _parametersGroupBox = mainWindow.FindName("WaveformParametersGroup") as GroupBox;
-            _param1DockPanel = mainWindow.FindName("ArbitraryParam1DockPanel") as DockPanel;
-            _param2DockPanel = mainWindow.FindName("ArbitraryParam2DockPanel") as DockPanel;
-            _applyButton = mainWindow.FindName("ApplyArbitraryWaveformButton") as Button;
+            _param2UnitTextBlock =      mainWindow.FindName("ArbitraryParam2UnitTextBlock") as TextBlock;
+            _waveformInfoTextBlock =    mainWindow.FindName("ArbitraryWaveformInfoTextBlock") as TextBlock;
+            _parametersGroupBox =       mainWindow.FindName("WaveformParametersGroup") as GroupBox;
+            _param1DockPanel =          mainWindow.FindName("ArbitraryParam1DockPanel") as DockPanel;
+            _param2DockPanel =          mainWindow.FindName("ArbitraryParam2DockPanel") as DockPanel;
+           
+            _applyButton =          mainWindow.FindName("ApplyArbitraryWaveformButton") as Button;
+
+
+            _waveformApplicationsTextBlock = mainWindow.FindName("WaveformApplicationsTextBlock") as TextBlock;
+            _waveformInfoTextBlock = mainWindow.FindName("WaveformInfoTextBlock") as TextBlock;
+
+
 
             // Get the Labels from the DockPanels
             if (_param1DockPanel != null && _param1DockPanel.Children.Count > 0)
@@ -67,6 +76,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
             // Initialize UI controls
             InitializeArbitraryWaveformControls();
         }
+
 
         // Property for the active channel
         public int ActiveChannel
@@ -268,69 +278,52 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         {
             try
             {
-                // Reset parameters to defaults
+                // Reset parameters to defaults (existing code)
                 if (_param1TextBox != null) _param1TextBox.Text = "1.0";
                 if (_param2TextBox != null) _param2TextBox.Text = "1.0";
 
-                // Set the parameter labels and units based on waveform type
+                // Set the parameter labels and units based on waveform type (existing code)
                 switch (waveformName.ToUpper())
                 {
-                    case "SINC":
-                        if (_parametersGroupBox != null) _parametersGroupBox.Visibility = Visibility.Visible;
-                        if (_param1DockPanel != null) _param1DockPanel.Visibility = Visibility.Visible;
-                        if (_param2DockPanel != null) _param2DockPanel.Visibility = Visibility.Collapsed;
-                        if (_param1Label != null) _param1Label.Content = "Zero Crossings:";
-                        if (_param1UnitTextBlock != null) _param1UnitTextBlock.Text = "";
-                        break;
-
-                    case "GAUSSIAN":
-                    case "LORENTZ":
-                    case "GAUSS":
-                        if (_parametersGroupBox != null) _parametersGroupBox.Visibility = Visibility.Visible;
-                        if (_param1DockPanel != null) _param1DockPanel.Visibility = Visibility.Visible;
-                        if (_param2DockPanel != null) _param2DockPanel.Visibility = Visibility.Visible;
-                        if (_param1Label != null) _param1Label.Content = "Width:";
-                        if (_param2Label != null) _param2Label.Content = "Center:";
-                        if (_param1UnitTextBlock != null) _param1UnitTextBlock.Text = "%";
-                        if (_param2UnitTextBlock != null) _param2UnitTextBlock.Text = "%";
-                        break;
-
-                    case "EXPONENTIAL RISE":
-                    case "EXPONENTIAL FALL":
-                    case "EXPRISE":
-                    case "EXPFALL":
-                        if (_parametersGroupBox != null) _parametersGroupBox.Visibility = Visibility.Visible;
-                        if (_param1DockPanel != null) _param1DockPanel.Visibility = Visibility.Visible;
-                        if (_param2DockPanel != null) _param2DockPanel.Visibility = Visibility.Collapsed;
-                        if (_param1Label != null) _param1Label.Content = "Time Constant:";
-                        if (_param1UnitTextBlock != null) _param1UnitTextBlock.Text = "%";
-                        break;
-
-                    case "CHIRP":
-                    case "BANDLIMITED":
-                        if (_parametersGroupBox != null) _parametersGroupBox.Visibility = Visibility.Visible;
-                        if (_param1DockPanel != null) _param1DockPanel.Visibility = Visibility.Visible;
-                        if (_param2DockPanel != null) _param2DockPanel.Visibility = Visibility.Visible;
-                        if (_param1Label != null) _param1Label.Content = "Start Freq:";
-                        if (_param2Label != null) _param2Label.Content = "End Freq:";
-                        if (_param1UnitTextBlock != null) _param1UnitTextBlock.Text = "Hz";
-                        if (_param2UnitTextBlock != null) _param2UnitTextBlock.Text = "Hz";
-                        break;
-
-                    default:
-                        // For other waveforms, hide the parameter controls
-                        if (_parametersGroupBox != null) _parametersGroupBox.Visibility = Visibility.Collapsed;
-                        if (_param1DockPanel != null) _param1DockPanel.Visibility = Visibility.Collapsed;
-                        if (_param2DockPanel != null) _param2DockPanel.Visibility = Visibility.Collapsed;
-                        break;
+                    // ... existing switch case code ...
                 }
 
                 // Update the waveform info text
-                // Update the waveform info text
                 if (_waveformInfoTextBlock != null)
                 {
-                    _waveformInfoTextBlock.Text = _device.GetArbitraryWaveformInfo(waveformName) +
-                        "\n\nChanges are applied automatically.";
+                    // Get full description 
+                    string fullDescription = _device.GetArbitraryWaveformInfo(waveformName);
+
+                    // Split description at "Applications:" if present
+                    int appIndex = fullDescription.IndexOf("Applications:");
+
+                    if (appIndex > 0)
+                    {
+                        // Get main info (everything before "Applications:")
+                        string mainInfo = fullDescription.Substring(0, appIndex).Trim();
+
+                        // Get applications info
+                        string applicationsPart = fullDescription.Substring(appIndex).Trim();
+
+                        // Set the separated texts
+                        _waveformInfoTextBlock.Text = mainInfo + "\n\nChanges are applied automatically.";
+
+                        if (_waveformApplicationsTextBlock != null)
+                        {
+                            _waveformApplicationsTextBlock.Text = applicationsPart;
+                        }
+                    }
+                    else
+                    {
+                        // No applications section, just use the whole text
+                        _waveformInfoTextBlock.Text = fullDescription +
+                            "\n\nChanges are applied automatically.";
+
+                        if (_waveformApplicationsTextBlock != null)
+                        {
+                            _waveformApplicationsTextBlock.Text = "";
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -511,9 +504,21 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 }
 
                 // Update parameter controls based on selected waveform
-                if (_waveformComboBox?.SelectedItem != null)
+                if (_waveformInfoTextBlock != null)
                 {
-                    UpdateArbitraryWaveformParameters(_waveformComboBox.SelectedItem.ToString());
+                    // Get description parts from ArbitraryWaveformDescriptions
+                    string basicInfo = Continuous.ArbitraryWaveform.Descriptions.ArbitraryWaveformDescriptions.GetBasicInfo(waveformName);
+                    string paramInfo = Continuous.ArbitraryWaveform.Descriptions.ArbitraryWaveformDescriptions.GetParameterInfo(waveformName);
+                    string applicationInfo = Continuous.ArbitraryWaveform.Descriptions.ArbitraryWaveformDescriptions.GetApplicationInfo(waveformName);
+
+                    // Set main info text (without applications)
+                    _waveformInfoTextBlock.Text = basicInfo + "\n\n" + paramInfo + "\n\nChanges are applied automatically.";
+
+                    // Set applications text (including the header)
+                    if (_waveformApplicationsTextBlock != null)
+                    {
+                        _waveformApplicationsTextBlock.Text = "Common Applications:\n" + applicationInfo;
+                    }
                 }
 
                 Log($"Refreshed arbitrary waveform settings for Channel {_activeChannel}");
