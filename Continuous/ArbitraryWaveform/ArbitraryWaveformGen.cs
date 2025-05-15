@@ -282,11 +282,6 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 if (_param1TextBox != null) _param1TextBox.Text = "1.0";
                 if (_param2TextBox != null) _param2TextBox.Text = "1.0";
 
-                // Set the parameter labels and units based on waveform type (existing code)
-                switch (waveformName.ToUpper())
-                {
-                    // ... existing switch case code ...
-                }
 
                 // Update the waveform info text
                 if (_waveformInfoTextBlock != null)
