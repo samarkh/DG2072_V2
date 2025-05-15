@@ -6,6 +6,8 @@ using System.Windows.Threading;
 using DG2072_USB_Control.Services;
 using DG2072_USB_Control.Continuous.ArbitraryWaveform.Descriptions;
 
+
+
 namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
 {
     public class ArbitraryWaveformGen : IArbitraryWaveformEventHandler
@@ -274,6 +276,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         }
 
         // Update parameter controls based on waveform type
+        // Modify the UpdateArbitraryWaveformParameters method to use ArbitraryWaveformDescriptions
         private void UpdateArbitraryWaveformParameters(string waveformName)
         {
             try
@@ -282,11 +285,10 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 if (_param1TextBox != null) _param1TextBox.Text = "1.0";
                 if (_param2TextBox != null) _param2TextBox.Text = "1.0";
 
-
                 // Update the waveform info text
                 if (_waveformInfoTextBlock != null)
                 {
-                    // Get full description 
+                    // Get comprehensive description from the device
                     string fullDescription = _device.GetArbitraryWaveformInfo(waveformName);
 
                     // Split description at "Applications:" if present
@@ -467,6 +469,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         #region Public Methods
 
         // Refresh the arbitrary waveform settings from the device
+        // Also fix the RefreshArbitraryWaveformSettings method
         public void RefreshArbitraryWaveformSettings()
         {
             try
@@ -498,44 +501,11 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     }
                 }
 
-                // Get the currently selected waveform
-                string selectedWaveform = _waveformComboBox.SelectedItem?.ToString();
-
                 // Update parameter controls based on selected waveform
-                if (_waveformInfoTextBlock != null && !string.IsNullOrEmpty(selectedWaveform))
+                if (_waveformComboBox?.SelectedItem != null)
                 {
-
-                    string fullDescription = ArbitraryWaveformDescriptions.GetDetailedDescription(selectedWaveform);
-                    // Split description at "Applications:" if present
-                    int appIndex = fullDescription.IndexOf("Applications:");
-
-                    if (appIndex > 0)
-                    {
-                        // Get main info (everything before "Applications:")
-                        string mainInfo = fullDescription.Substring(0, appIndex).Trim();
-
-                        // Get applications info
-                        string applicationsPart = fullDescription.Substring(appIndex).Trim();
-
-                        // Set the separated texts
-                        _waveformInfoTextBlock.Text = mainInfo + "\n\nChanges are applied automatically.";
-
-                        if (_waveformApplicationsTextBlock != null)
-                        {
-                            _waveformApplicationsTextBlock.Text = applicationsPart;
-                        }
-                    }
-                    else
-                    {
-                        // No applications section, just use the whole text
-                        _waveformInfoTextBlock.Text = fullDescription +
-                            "\n\nChanges are applied automatically.";
-
-                        if (_waveformApplicationsTextBlock != null)
-                        {
-                            _waveformApplicationsTextBlock.Text = "";
-                        }
-                    }
+                    string selectedWaveform = _waveformComboBox.SelectedItem.ToString();
+                    UpdateArbitraryWaveformParameters(selectedWaveform);
                 }
 
                 Log($"Refreshed arbitrary waveform settings for Channel {_activeChannel}");
@@ -545,7 +515,6 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                 Log($"Error refreshing arbitrary waveform settings: {ex.Message}");
             }
         }
-
 
         #endregion
     }
