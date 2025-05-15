@@ -49,24 +49,18 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
             _activeChannel = channel;
 
             // Initialize UI references
+            _applyButton = mainWindow.FindName("ApplyArbitraryWaveformButton") as Button;
             _categoryComboBox = mainWindow.FindName("ArbitraryWaveformCategoryComboBox") as ComboBox;
-            _waveformComboBox = mainWindow.FindName("ArbitraryWaveformComboBox") as ComboBox;
-            _param1TextBox =    mainWindow.FindName("ArbitraryParam1TextBox") as TextBox;
-            _param2TextBox =    mainWindow.FindName("ArbitraryParam2TextBox") as TextBox;
+            _parametersGroupBox = mainWindow.FindName("WaveformParametersGroup") as GroupBox;
+            _param1DockPanel = mainWindow.FindName("ArbitraryParam1DockPanel") as DockPanel;
+            _param2DockPanel = mainWindow.FindName("ArbitraryParam2DockPanel") as DockPanel;
+            _param1TextBox = mainWindow.FindName("ArbitraryParam1TextBox") as TextBox;
+            _param2TextBox = mainWindow.FindName("ArbitraryParam2TextBox") as TextBox;
             _param1UnitTextBlock = mainWindow.FindName("ArbitraryParam1UnitTextBlock") as TextBlock;
-            _param2UnitTextBlock =      mainWindow.FindName("ArbitraryParam2UnitTextBlock") as TextBlock;
-            _waveformInfoTextBlock =    mainWindow.FindName("ArbitraryWaveformInfoTextBlock") as TextBlock;
-            _parametersGroupBox =       mainWindow.FindName("WaveformParametersGroup") as GroupBox;
-            _param1DockPanel =          mainWindow.FindName("ArbitraryParam1DockPanel") as DockPanel;
-            _param2DockPanel =          mainWindow.FindName("ArbitraryParam2DockPanel") as DockPanel;
-           
-            _applyButton =          mainWindow.FindName("ApplyArbitraryWaveformButton") as Button;
-
-
+            _param2UnitTextBlock = mainWindow.FindName("ArbitraryParam2UnitTextBlock") as TextBlock;
+            _waveformComboBox = mainWindow.FindName("ArbitraryWaveformComboBox") as ComboBox;
             _waveformApplicationsTextBlock = mainWindow.FindName("WaveformApplicationsTextBlock") as TextBlock;
-            //_waveformInfoTextBlock = mainWindow.FindName("WaveformInfoTextBlock") as TextBlock;
-
-
+            _waveformInfoTextBlock = mainWindow.FindName("ArbitraryWaveformInfoTextBlock") as TextBlock;
 
             // Get the Labels from the DockPanels
             if (_param1DockPanel != null && _param1DockPanel.Children.Count > 0)
@@ -276,7 +270,6 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         }
 
         // Update parameter controls based on waveform type
-        // Modify the UpdateArbitraryWaveformParameters method to use ArbitraryWaveformDescriptions
         private void UpdateArbitraryWaveformParameters(string waveformName)
         {
             try
