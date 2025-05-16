@@ -553,11 +553,11 @@
                                         <DockPanel Margin="0,5">
                                             <Label Content="Control Mode:" Width="120" ToolTip="Choose how to control the dual tone frequencies"/>
                                             <RadioButton x:Name="DirectFrequencyMode" Content="Direct Frequencies" Margin="0,0,10,0" 
-                                                    IsChecked="True" GroupName="DualToneMode" Checked="DualToneModeChanged"
-                                                    ToolTip="Set Frequency 1 and Frequency 2 directly"/>
+                    IsChecked="True" GroupName="DualToneMode" Checked="DualToneModeChanged"
+                    ToolTip="Set Frequency 1 and Frequency 2 directly"/>
                                             <RadioButton x:Name="CenterOffsetMode" Content="Center/Offset" Margin="0,0,10,0" 
-                                                    GroupName="DualToneMode" Checked="DualToneModeChanged"
-                                                    ToolTip="Set center frequency and offset frequency"/>
+                    GroupName="DualToneMode" Checked="DualToneModeChanged"
+                    ToolTip="Set center frequency and offset frequency"/>
                                         </DockPanel>
 
                                         <!-- Direct Frequency Mode Panel -->
@@ -572,35 +572,35 @@
                                             <DockPanel Margin="0,5">
                                                 <Label Content="Secondary Freq:" Width="120" ToolTip="Second frequency component (F2)"/>
                                                 <CheckBox x:Name="SynchronizeFrequenciesCheckBox" Content="Auto-sync" Margin="0,0,10,0" 
-                                                                IsChecked="True" Checked="SynchronizeFrequenciesCheckBox_CheckedChanged" 
-                                                                Unchecked="SynchronizeFrequenciesCheckBox_CheckedChanged"
-                                                                ToolTip="Automatically synchronize secondary frequency to primary frequency"/>
+                                IsChecked="True" Checked="SynchronizeFrequenciesCheckBox_CheckedChanged" 
+                                Unchecked="SynchronizeFrequenciesCheckBox_CheckedChanged"
+                                ToolTip="Automatically synchronize secondary frequency to primary frequency"/>
                                                 <ComboBox x:Name="FrequencyRatioComboBox" Width="70" 
-                                                            SelectionChanged="FrequencyRatioComboBox_SelectionChanged" 
-                                                            ToolTip="Ratio of secondary to primary frequency"
-                                                            IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}">
-                                                <ComboBoxItem Content="1.5" />
-                                                <ComboBoxItem Content="2.0" IsSelected="True" />
-                                                <ComboBoxItem Content="3.0" />
-                                                <ComboBoxItem Content="4.0" />
-                                                <ComboBoxItem Content="5.0" />
+                            SelectionChanged="FrequencyRatioComboBox_SelectionChanged" 
+                            ToolTip="Ratio of secondary to primary frequency"
+                            IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}">
+                                                    <ComboBoxItem Content="1.5" />
+                                                    <ComboBoxItem Content="2.0" IsSelected="True" />
+                                                    <ComboBoxItem Content="3.0" />
+                                                    <ComboBoxItem Content="4.0" />
+                                                    <ComboBoxItem Content="5.0" />
                                                 </ComboBox>
                                                 <TextBlock Text="× Primary" Margin="5,0,0,0" VerticalAlignment="Center"
-                    IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}"/>
+    IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}"/>
                                             </DockPanel>
 
                                             <!-- Secondary Frequency Manual Control -->
                                             <DockPanel x:Name="SecondaryFrequencyDockPanel" Margin="0,5" IsEnabled="False">
                                                 <Label Content="" Width="120"/>
                                                 <TextBox x:Name="SecondaryFrequencyTextBox" Width="100" 
-                                                            TextChanged="SecondaryFrequencyTextBox_TextChanged" 
-                                                            Text="2000" 
-                                                            HorizontalContentAlignment="Right" 
-                                                            VerticalContentAlignment="Center"/>
+                            TextChanged="SecondaryFrequencyTextBox_TextChanged" 
+                            Text="2000" 
+                            HorizontalContentAlignment="Right" 
+                            VerticalContentAlignment="Center"/>
                                                 <ComboBox x:Name="SecondaryFrequencyUnitComboBox" Width="70" 
-                                                            Margin="5,0,0,0" 
-                                                            HorizontalAlignment="Left"
-                                                            SelectionChanged="SecondaryFrequencyUnitComboBox_SelectionChanged">
+                            Margin="5,0,0,0" 
+                            HorizontalAlignment="Left"
+                            SelectionChanged="SecondaryFrequencyUnitComboBox_SelectionChanged">
                                                     <ComboBoxItem Content="µHz"/>
                                                     <ComboBoxItem Content="mHz"/>
                                                     <ComboBoxItem Content="Hz" IsSelected="True"/>
@@ -612,18 +612,18 @@
 
                                         <!-- Center/Offset Mode Panel -->
                                         <StackPanel x:Name="CenterOffsetPanel" Visibility="Collapsed">
-                                            <!-- Center Frequency Control -->
+                                            <!-- Center Frequency Control - Will be hidden when in Center/Offset mode -->
                                             <DockPanel Margin="0,5">
                                                 <Label Content="Center Freq:" Width="120" ToolTip="Center frequency between F1 and F2"/>
                                                 <TextBox x:Name="CenterFrequencyTextBox" Width="100" 
-                    TextChanged="CenterFrequencyTextBox_TextChanged" 
-                    Text="1500" 
-                    HorizontalContentAlignment="Right" 
-                    VerticalContentAlignment="Center"/>
+                        TextChanged="CenterFrequencyTextBox_TextChanged" 
+                        Text="1500" 
+                        HorizontalContentAlignment="Right" 
+                        VerticalContentAlignment="Center"/>
                                                 <ComboBox x:Name="CenterFrequencyUnitComboBox" Width="70" 
-                    Margin="5,0,0,0" 
-                    HorizontalAlignment="Left"
-                    SelectionChanged="CenterFrequencyUnitComboBox_SelectionChanged">
+                        Margin="5,0,0,0" 
+                        HorizontalAlignment="Left"
+                        SelectionChanged="CenterFrequencyUnitComboBox_SelectionChanged">
                                                     <ComboBoxItem Content="µHz"/>
                                                     <ComboBoxItem Content="mHz"/>
                                                     <ComboBoxItem Content="Hz" IsSelected="True"/>
@@ -636,14 +636,14 @@
                                             <DockPanel Margin="0,5">
                                                 <Label Content="Offset Freq:" Width="120" ToolTip="Frequency difference between F1 and F2"/>
                                                 <TextBox x:Name="OffsetFrequencyTextBox" Width="100" 
-                    TextChanged="OffsetFrequencyTextBox_TextChanged" 
-                    Text="1000" 
-                    HorizontalContentAlignment="Right" 
-                    VerticalContentAlignment="Center"/>
+                        TextChanged="OffsetFrequencyTextBox_TextChanged" 
+                        Text="1000" 
+                        HorizontalContentAlignment="Right" 
+                        VerticalContentAlignment="Center"/>
                                                 <ComboBox x:Name="OffsetFrequencyUnitComboBox" Width="70" 
-                    Margin="5,0,0,0" 
-                    HorizontalAlignment="Left"
-                    SelectionChanged="OffsetFrequencyUnitComboBox_SelectionChanged">
+                        Margin="5,0,0,0" 
+                        HorizontalAlignment="Left"
+                        SelectionChanged="OffsetFrequencyUnitComboBox_SelectionChanged">
                                                     <ComboBoxItem Content="µHz"/>
                                                     <ComboBoxItem Content="mHz"/>
                                                     <ComboBoxItem Content="Hz" IsSelected="True"/>
@@ -665,11 +665,11 @@
 
                                                 <Label Content="Calculated F1:" Grid.Row="0" Grid.Column="0"/>
                                                 <TextBlock x:Name="CalculatedF1Display" Text="1000 Hz" Grid.Row="0" Grid.Column="1" 
-                    VerticalAlignment="Center" Foreground="#FF505050"/>
+                        VerticalAlignment="Center" Foreground="#FF505050"/>
 
                                                 <Label Content="Calculated F2:" Grid.Row="1" Grid.Column="0"/>
                                                 <TextBlock x:Name="CalculatedF2Display" Text="2000 Hz" Grid.Row="1" Grid.Column="1" 
-                    VerticalAlignment="Center" Foreground="#FF505050"/>
+                        VerticalAlignment="Center" Foreground="#FF505050"/>
                                             </Grid>
                                         </StackPanel>
 

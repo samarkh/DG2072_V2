@@ -1467,6 +1467,9 @@ namespace DG2072_USB_Control
             UpdateWaveformSpecificControls(waveform);
         }
 
+        // Modify the ChannelFrequencyTextBox_TextChanged method to update 
+        // dual tone center frequency when in Center/Offset mode
+
         private void ChannelFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!isConnected) return;
@@ -1501,20 +1504,27 @@ namespace DG2072_USB_Control
             _frequencyUpdateTimer.Stop();
             _frequencyUpdateTimer.Start();
 
-            // PART 7: Add to ChannelFrequencyTextBox_TextChanged handler (to keep dual tone frequencies in sync)
-            // Add this at the end of the existing method
-
+            // Check if this is in DUAL TONE mode with Center/Offset mode active
             if (isConnected &&
-                ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "DUAL TONE" &&
-                SynchronizeFrequenciesCheckBox.IsChecked == true &&
-                double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
+                ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "DUAL TONE")
             {
-                // Update secondary frequency to maintain the ratio
-                double secondaryFreq = primaryFreq * frequencyRatio;
-                SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
+                if (CenterOffsetMode.IsChecked == true)
+                {
+                    // In Center/Offset mode, update offset calculations directly
+                    // This will trigger the UpdateFrequenciesFromCenterOffset method
+                    if (dualToneGen != null)
+                    {
+                        dualToneGen.UpdateFrequenciesFromCenterOffset();
+                    }
+                }
+                else if (SynchronizeFrequenciesCheckBox.IsChecked == true &&
+                        double.TryParse(ChannelFrequencyTextBox.Text, out double primaryFreq))
+                {
+                    // Update secondary frequency to maintain the ratio
+                    double secondaryFreq = primaryFreq * frequencyRatio;
+                    SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
+                }
             }
-
-
         }
 
         private void ChannelAmplitudeTextBox_TextChanged(object sender, TextChangedEventArgs e)

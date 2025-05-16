@@ -42,6 +42,10 @@ namespace DG2072_USB_Control.Continuous.DualTone
         private DispatcherTimer _centerFrequencyUpdateTimer;
         private DispatcherTimer _offsetFrequencyUpdateTimer;
 
+        // Add a private field to store the frequency label
+        private readonly Label _frequencyLabel;
+
+
         // Settings
         private double _frequencyRatio = 2.0; // Default frequency ratio
 
@@ -49,6 +53,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
         public event EventHandler<string> LogEvent;
 
         // Constructor
+        // Update the constructor to find the frequency label
         public DualToneGen(RigolDG2072 device, int channel, Window mainWindow)
         {
             _device = device;
@@ -74,6 +79,13 @@ namespace DG2072_USB_Control.Continuous.DualTone
             // Main frequency controls (needed for synchronization)
             _primaryFrequencyTextBox = mainWindow.FindName("ChannelFrequencyTextBox") as TextBox;
             _primaryFrequencyUnitComboBox = mainWindow.FindName("ChannelFrequencyUnitComboBox") as ComboBox;
+
+            // Find the frequency label within the FrequencyDockPanel
+            DockPanel freqDockPanel = mainWindow.FindName("FrequencyDockPanel") as DockPanel;
+            if (freqDockPanel != null && freqDockPanel.Children.Count > 0)
+            {
+                _frequencyLabel = freqDockPanel.Children[0] as Label;
+            }
         }
 
         // Property for the active channel
@@ -179,6 +191,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
             }
         }
 
+        // Update the OnDualToneModeChanged method to modify the frequency label
         public void OnDualToneModeChanged(object sender, RoutedEventArgs e)
         {
             if (!IsDeviceConnected()) return;
@@ -188,6 +201,25 @@ namespace DG2072_USB_Control.Continuous.DualTone
             // Toggle visibility of panels
             _directFrequencyPanel.Visibility = isDirectMode ? Visibility.Visible : Visibility.Collapsed;
             _centerOffsetPanel.Visibility = isDirectMode ? Visibility.Collapsed : Visibility.Visible;
+
+            // Get the row for CenterFrequency in CenterOffsetPanel
+            if (_centerOffsetPanel != null && _centerOffsetPanel.Children.Count > 0)
+            {
+                // Find the DockPanel for Center Frequency (first child)
+                DockPanel centerFreqPanel = _centerOffsetPanel.Children[0] as DockPanel;
+                if (centerFreqPanel != null)
+                {
+                    // When in Center/Offset mode, hide the dedicated Center Freq control
+                    // since we'll use the main frequency control instead
+                    centerFreqPanel.Visibility = isDirectMode ? Visibility.Visible : Visibility.Collapsed;
+                }
+            }
+
+            // Modify main frequency label to show appropriate text based on mode
+            if (_frequencyLabel != null)
+            {
+                _frequencyLabel.Content = isDirectMode ? "Frequency:" : "Center Freq:";
+            }
 
             // If switching modes, update the displayed values
             if (isDirectMode)
@@ -199,8 +231,38 @@ namespace DG2072_USB_Control.Continuous.DualTone
             {
                 // Calculate center and offset from current F1 and F2
                 UpdateCenterOffsetFromFrequencies();
+
+                // When switching to Center/Offset mode, copy center value to main frequency control
+                if (double.TryParse(_centerFrequencyTextBox.Text, out double centerFreq))
+                {
+                    string unit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
+
+                    // Update main frequency control
+                    _primaryFrequencyTextBox.Text = centerFreq.ToString();
+
+                    // Try to match units if possible
+                    SelectMatchingUnit(_primaryFrequencyUnitComboBox, unit);
+                }
             }
         }
+
+        // Helper method to select matching unit in a ComboBox
+        private void SelectMatchingUnit(ComboBox unitComboBox, string unitToMatch)
+        {
+            if (unitComboBox != null)
+            {
+                foreach (var item in unitComboBox.Items)
+                {
+                    ComboBoxItem comboItem = item as ComboBoxItem;
+                    if (comboItem != null && comboItem.Content.ToString() == unitToMatch)
+                    {
+                        unitComboBox.SelectedItem = comboItem;
+                        break;
+                    }
+                }
+            }
+        }
+
 
         public void OnCenterFrequencyTextChanged(object sender, TextChangedEventArgs e)
         {
@@ -430,14 +492,29 @@ namespace DG2072_USB_Control.Continuous.DualTone
         }
 
         // Calculate F1 and F2 from center and offset
-        private void UpdateFrequenciesFromCenterOffset()
+        // Update UpdateFrequenciesFromCenterOffset method to sync with main frequency control
+        public void UpdateFrequenciesFromCenterOffset()
         {
             try
             {
                 // Get current center and offset frequencies in Hz
                 double centerFreqHz = 0, offsetFreqHz = 0;
 
-                if (double.TryParse(_centerFrequencyTextBox.Text, out double center))
+                // In Center/Offset mode, read center frequency from main control
+                if (_directFrequencyMode.IsChecked != true && _primaryFrequencyTextBox != null)
+                {
+                    if (double.TryParse(_primaryFrequencyTextBox.Text, out double center))
+                    {
+                        string centerUnit = UnitConversionUtility.GetFrequencyUnit(_primaryFrequencyUnitComboBox);
+                        centerFreqHz = center * UnitConversionUtility.GetFrequencyMultiplier(centerUnit);
+
+                        // Update the center frequency control to match
+                        string centerDisplayUnit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
+                        double displayValue = UnitConversionUtility.ConvertFromMicroHz(centerFreqHz * 1e6, centerDisplayUnit);
+                        _centerFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
+                    }
+                }
+                else if (double.TryParse(_centerFrequencyTextBox.Text, out double center))
                 {
                     string centerUnit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
                     centerFreqHz = center * UnitConversionUtility.GetFrequencyMultiplier(centerUnit);
@@ -455,7 +532,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
                 double f1Hz = centerFreqHz - (offsetFreqHz / 2.0);
                 double f2Hz = centerFreqHz + (offsetFreqHz / 2.0);
 
-                // Update the calculated values display using UnitConversionUtility
+                // Update the calculated values display
                 _calculatedF1Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f1Hz)} Hz";
                 _calculatedF2Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f2Hz)} Hz";
 
@@ -467,6 +544,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
                 Log($"Error updating frequencies from center/offset: {ex.Message}");
             }
         }
+
 
         // Apply dual tone with specific frequencies
         private void ApplyDualToneWithFrequencies(double f1Hz, double f2Hz)
