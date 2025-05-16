@@ -1295,8 +1295,41 @@ namespace DG2072_USB_Control
         {
             if (!isConnected) return;
 
+            // Get previous waveform type (if available)
+            string previousWaveform = string.Empty;
+            if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is ComboBoxItem)
+            {
+                previousWaveform = ((ComboBoxItem)e.RemovedItems[0]).Content.ToString().ToUpper();
+            }
+
             string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
             string selectedArbWaveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString();
+
+            // If leaving Dual Tone mode, set frequency to F1 instead of center
+            if (previousWaveform == "DUAL TONE" && waveform != "DUAL TONE")
+            {
+                try
+                {
+                    // If we can get center and offset, we can calculate F1
+                    if (CenterFrequencyTextBox != null && OffsetFrequencyTextBox != null &&
+                        double.TryParse(CenterFrequencyTextBox.Text, out double center) &&
+                        double.TryParse(OffsetFrequencyTextBox.Text, out double offset))
+                    {
+                        // Calculate F1 using: F1 = Center - Offset
+                        double f1 = center - offset;
+
+                        // Update the frequency setting
+                        ChannelFrequencyTextBox.Text = f1.ToString();
+
+                        // Log for debugging
+                        LogMessage($"Switching from Dual Tone: Set frequency to F1 ({f1} Hz) instead of center ({center} Hz)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"Error setting F1 frequency when switching from Dual Tone: {ex.Message}");
+                }
+            }
 
             // Special handling for HARMONIC waveform
             if (waveform == "HARMONIC")
@@ -1460,21 +1493,20 @@ namespace DG2072_USB_Control
                     MessageBox.Show($"Error setting {waveform} mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            
+
             // Add the sine generator code here
             else if (waveform == "SINE" && sineGenerator != null)
             {
                 // Delegate to the sine generator
                 sineGenerator.ApplySineParameters();
             }
-            
+
             // Add the Noise generator code here
             else if (waveform == "NOISE" && noiseGenerator != null)
             {
                 // Delegate to the noise generator
                 noiseGenerator.ApplyNoiseParameters();
             }
-
             else
             {
                 // For all other waveforms, use the standard APPLY command to ensure it's set properly
@@ -1488,10 +1520,10 @@ namespace DG2072_USB_Control
 
                     // Map upper case waveform name to the correct apply command
                     string applyWaveform = waveform;
-                    if (waveform == "SINE")   applyWaveform = "SIN";
+                    if (waveform == "SINE") applyWaveform = "SIN";
                     if (waveform == "SQUARE") applyWaveform = "SQU";
-                    if (waveform == "PULSE")  applyWaveform = "PULS";
-                    if (waveform == "NOISE")  applyWaveform = "NOIS";
+                    if (waveform == "PULSE") applyWaveform = "PULS";
+                    if (waveform == "NOISE") applyWaveform = "NOIS";
 
                     // Special handling for NOISE waveform
                     if (waveform == "NOISE")
@@ -1522,6 +1554,7 @@ namespace DG2072_USB_Control
             // Update waveform-specific UI elements visibility
             UpdateWaveformSpecificControls(waveform);
         }
+
 
         // Modify the ChannelFrequencyTextBox_TextChanged method to update 
         // dual tone center frequency when in Center/Offset mode

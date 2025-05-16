@@ -216,15 +216,16 @@ namespace DG2072_USB_Control.Continuous.DualTone
                 {
                     // When in Center/Offset mode, hide the dedicated Center Freq control
                     // since we'll use the main frequency control instead
-                    centerFreqPanel.Visibility = isDirectMode ? Visibility.Visible : Visibility.Collapsed;
+                    //centerFreqPanel.Visibility = isDirectMode ? Visibility.Visible : Visibility.Collapsed;
+                    centerFreqPanel.Visibility = Visibility.Visible;
                 }
             }
 
             // Modify main frequency label to show appropriate text based on mode
-            if (_frequencyLabel != null)
-            {
-                _frequencyLabel.Content = isDirectMode ? "Frequency:" : "Center Freq:";
-            }
+            //if (_frequencyLabel != null)
+            //{
+            //    _frequencyLabel.Content = isDirectMode ? "Frequency:" : "Center Freq:";
+            //}
 
             // If switching modes, update the displayed values
             if (isDirectMode)
@@ -600,7 +601,8 @@ namespace DG2072_USB_Control.Continuous.DualTone
         /// </summary>
         private double CalculateOffsetFrequency(double f1, double f2)
         {
-            return f2 - f1;
+            //return (f2 - f1);
+            return (f2 - f1) / 2.0;  // New formula - half the distance between tones
         }
 
         /// <summary>
@@ -608,7 +610,8 @@ namespace DG2072_USB_Control.Continuous.DualTone
         /// </summary>
         private double CalculateF1FromCenterOffset(double center, double offset)
         {
-            return center - (offset / 2.0);
+            //return center - (offset / 2.0);
+            return center - offset;  // New formula
         }
 
         /// <summary>
@@ -616,7 +619,8 @@ namespace DG2072_USB_Control.Continuous.DualTone
         /// </summary>
         private double CalculateF2FromCenterOffset(double center, double offset)
         {
-            return center + (offset / 2.0);
+            //return center + (offset / 2.0);
+            return center + offset;  // New formula
         }
 
 
