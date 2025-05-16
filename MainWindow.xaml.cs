@@ -184,9 +184,6 @@ namespace DG2072_USB_Control
             }
         }
 
-
-
-
         private void RefreshChannelSettings()
         {
             try
@@ -2567,15 +2564,6 @@ namespace DG2072_USB_Control
             }
         }
 
-        private void RefreshArbitraryWaveformSettings(int channel)
-        {
-            if (arbitraryWaveformGen != null)
-            {
-                arbitraryWaveformGen.ActiveChannel = channel;
-                arbitraryWaveformGen.RefreshArbitraryWaveformSettings();
-            }
-        }
-
         private void RefreshHarmonicSettings()
         {
             if (_harmonicsUIController != null)
@@ -2592,6 +2580,34 @@ namespace DG2072_USB_Control
         private void SetHarmonicUIElementsState(bool enabled)
         {
             _harmonicsUIController?.SetHarmonicUIElementsState(enabled);
+        }
+
+        private void HarmonicsToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if (!isConnected) return;
+
+            bool isEnabled = HarmonicsToggle.IsChecked == true;
+            HarmonicsToggle.Content = isEnabled ? "ENABLED" : "DISABLED";
+
+            try
+            {
+                if (isEnabled)
+                {
+                    // Enable harmonics on the device
+                    rigolDG2072.SetHarmonicState(activeChannel, true);
+                    LogMessage($"Harmonics enabled for Channel {activeChannel}");
+                }
+                else
+                {
+                    // Disable harmonics on the device
+                    rigolDG2072.SetHarmonicState(activeChannel, false);
+                    LogMessage($"Harmonics disabled for Channel {activeChannel}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error toggling harmonics: {ex.Message}");
+            }
         }
 
         #endregion
@@ -2626,10 +2642,15 @@ namespace DG2072_USB_Control
                 arbitraryWaveformGen.OnWaveformSelectionChanged(sender, e);
         }
 
+        private void RefreshArbitraryWaveformSettings(int channel)
+        {
+            if (arbitraryWaveformGen != null)
+            {
+                arbitraryWaveformGen.ActiveChannel = channel;
+                arbitraryWaveformGen.RefreshArbitraryWaveformSettings();
+            }
+        }
 
-        // Apply the selected arbitrary waveform
-        // Apply the selected arbitrary waveform
-        // Apply the selected arbitrary waveform
         private void ApplyArbitraryWaveformButton_Click(object sender, RoutedEventArgs e)
         {
             if (arbitraryWaveformGen != null)
@@ -2666,33 +2687,7 @@ namespace DG2072_USB_Control
                 dcGenerator.OnDCImpedanceChanged(sender, e);
         }
 
-        private void HarmonicsToggle_Click(object sender, RoutedEventArgs e)
-        {
-            if (!isConnected) return;
 
-            bool isEnabled = HarmonicsToggle.IsChecked == true;
-            HarmonicsToggle.Content = isEnabled ? "ENABLED" : "DISABLED";
-
-            try
-            {
-                if (isEnabled)
-                {
-                    // Enable harmonics on the device
-                    rigolDG2072.SetHarmonicState(activeChannel, true);
-                    LogMessage($"Harmonics enabled for Channel {activeChannel}");
-                }
-                else
-                {
-                    // Disable harmonics on the device
-                    rigolDG2072.SetHarmonicState(activeChannel, false);
-                    LogMessage($"Harmonics disabled for Channel {activeChannel}");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error toggling harmonics: {ex.Message}");
-            }
-        }
 
 
         #endregion
