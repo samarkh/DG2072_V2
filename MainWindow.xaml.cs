@@ -47,7 +47,7 @@ namespace DG2072_USB_Control
         private DispatcherTimer _amplitudeUpdateTimer;
         private DispatcherTimer _offsetUpdateTimer;
         private DispatcherTimer _phaseUpdateTimer;
-        // private DispatcherTimer _symmetryUpdateTimer;
+        private DispatcherTimer _primaryFrequencyUpdateTimer;
         private DockPanel SymmetryDockPanel;
 
         // private DispatcherTimer _dutyCycleUpdateTimer;
@@ -1144,6 +1144,65 @@ namespace DG2072_USB_Control
             CommandLogTextBox.Clear();
         }
 
+
+
+        private void PrimaryFrequencyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!isConnected) return;
+            if (!double.TryParse(PrimaryFrequencyTextBox.Text, out double frequency)) return;
+
+            // Use a timer to debounce rapid changes
+            if (_primaryFrequencyUpdateTimer == null)
+            {
+                _primaryFrequencyUpdateTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(500)
+                };
+                _primaryFrequencyUpdateTimer.Tick += (s, args) =>
+                {
+                    _primaryFrequencyUpdateTimer.Stop();
+                    if (double.TryParse(PrimaryFrequencyTextBox.Text, out double freq))
+                    {
+                        // Only update if in dual tone mode
+                        if (((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "DUAL TONE")
+                        {
+                            // Update SecondaryFrequencyTextBox if auto-sync is enabled
+                            if (SynchronizeFrequenciesCheckBox.IsChecked == true)
+                            {
+                                double secondaryFreq = freq * frequencyRatio;
+                                SecondaryFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(secondaryFreq);
+                            }
+
+                            // Apply the dual tone settings
+                            if (dualToneGen != null)
+                                dualToneGen.ApplyDualToneParameters();
+                        }
+                    }
+                };
+            }
+
+            _primaryFrequencyUpdateTimer.Stop();
+            _primaryFrequencyUpdateTimer.Start();
+        }
+
+        private void PrimaryFrequencyUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!isConnected) return;
+
+            if (double.TryParse(PrimaryFrequencyTextBox.Text, out double frequency))
+            {
+                // Only update if in dual tone mode
+                if (((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper() == "DUAL TONE")
+                {
+                    if (dualToneGen != null)
+                        dualToneGen.ApplyDualToneParameters();
+                }
+            }
+        }
+
+
+
+
         #endregion
 
         #region Channel Basic Controls Event Handlers
@@ -2027,18 +2086,22 @@ namespace DG2072_USB_Control
             if (ChannelApplyButton != null)
             {
                 // Hide button for dual tone
+                // In the UpdateWaveformSpecificControls method
                 if (isDualTone)
                 {
-                    ChannelApplyButton.Visibility = Visibility.Collapsed;
-                    LogMessage($"Hiding Apply Settings button for dual tone waveform");
-                }
-                else
-                {
-                    ChannelApplyButton.Visibility = Visibility.Visible;
-                }
-            }
+                    // Hide main frequency controls when in dual tone mode
+                    if (FrequencyDockPanel != null)
+                        FrequencyDockPanel.Visibility = Visibility.Collapsed;
 
-            if (FrequencyDockPanel != null && FrequencyPeriodModeToggle != null && PulseRateModeToggle != null)
+                    if (PeriodDockPanel != null)
+                        PeriodDockPanel.Visibility = Visibility.Collapsed;
+
+                    // Make sure dual tone controls are visible
+                    if (DualToneGroupBox != null)
+                        DualToneGroupBox.Visibility = Visibility.Visible;
+                }
+            }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+                if (FrequencyDockPanel != null && FrequencyPeriodModeToggle != null && PulseRateModeToggle != null)
             {
                 if (FrequencyDockPanel.Visibility == Visibility.Collapsed &&
                     PeriodDockPanel.Visibility == Visibility.Collapsed)
@@ -2053,27 +2116,6 @@ namespace DG2072_USB_Control
                     PulseRateModeToggle.Visibility = Visibility.Visible;
                     LogMessage($"Setting toggle buttons visibility to Visible because at least one panel is visible");
                 }
-            }
-
-            // Handle arbitrary waveform controls visibility
-            // Handle arbitrary waveform controls visibility
-            if (ArbitraryWaveformGroupBox != null)
-            {
-                ArbitraryWaveformGroupBox.Visibility = isArbitraryWaveform ? Visibility.Visible : Visibility.Collapsed;
-
-                // Hide the Apply button since changes are auto-applied
-                if (ApplyArbitraryWaveformButton != null)
-                {
-                    ApplyArbitraryWaveformButton.Visibility = Visibility.Collapsed;
-                }
-            }
-
-
-
-            // Handle harmonic-specific controls
-            if (HarmonicsGroupBox != null)
-            {
-                HarmonicsGroupBox.Visibility = isHarmonic ? Visibility.Visible : Visibility.Collapsed;
             }
 
             // Handle dual tone-specific controls
@@ -2107,6 +2149,24 @@ namespace DG2072_USB_Control
                 if (SynchronizeFrequenciesCheckBox != null)
                 {
                     SynchronizeFrequenciesCheckBox.Visibility = isDualTone ? Visibility.Visible : Visibility.Collapsed;
+                }
+            }
+
+            // Handle harmonic-specific controls
+            if (HarmonicsGroupBox != null)
+            {
+                HarmonicsGroupBox.Visibility = isHarmonic ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            // Handle arbitrary waveform controls visibility
+            if (ArbitraryWaveformGroupBox != null)
+            {
+                ArbitraryWaveformGroupBox.Visibility = isArbitraryWaveform ? Visibility.Visible : Visibility.Collapsed;
+
+                // Hide the Apply button since changes are auto-applied
+                if (ApplyArbitraryWaveformButton != null)
+                {
+                    ApplyArbitraryWaveformButton.Visibility = Visibility.Collapsed;
                 }
             }
 
@@ -2171,8 +2231,17 @@ namespace DG2072_USB_Control
 
             string currentWaveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
             bool isNoise = (currentWaveform == "NOISE"); // Noise doesn't use frequency or period
+            bool isDualTone = (currentWaveform == "DUAL TONE"); // Dual tone uses its own controls
 
-            // Toggle visibility of panels based on selected mode
+            // Hide main frequency controls if in dual tone mode
+            if (isDualTone)
+            {
+                FrequencyDockPanel.Visibility = Visibility.Collapsed;
+                PeriodDockPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Toggle visibility of panels based on selected mode for other waveforms
             if (_frequencyModeActive)
             {
                 // In Frequency mode, show frequency controls, hide period controls
@@ -2246,7 +2315,6 @@ namespace DG2072_USB_Control
                 LogMessage($"Error updating calculated rate value: {ex.Message}");
             }
         }
-
 
         private void AdjustFrequencyAndUnit(TextBox textBox, ComboBox unitComboBox)
         {

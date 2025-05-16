@@ -99,11 +99,13 @@
                                             <ComboBoxItem Content="MHz"/>
                                         </ComboBox>
                                     </DockPanel>
+                                    
                                     <!-- Mode Toggle in second column -->
                                     <DockPanel x:Name="PulseRateModeDockPanel" Grid.Column="1" Visibility="Visible">
                                         <ToggleButton x:Name="FrequencyPeriodModeToggle" Content="To Period" Width="100" 
-         Click="FrequencyPeriodModeToggle_Click" IsChecked="True" HorizontalAlignment="Left"/>
+                                                 Click="FrequencyPeriodModeToggle_Click" IsChecked="True" HorizontalAlignment="Left"/>
                                     </DockPanel>
+                                    
                                     <!-- Period Controls in first column (shares column with Frequency) -->
                                     <DockPanel x:Name="PeriodDockPanel" Grid.Column="0" Margin="0,0,10,0" Visibility="Collapsed">
                                         <Label Content="Period:" Width="100"/>
@@ -233,12 +235,7 @@
                                     </ComboBox>
                                 </DockPanel>
 
-
-
-
-
                                 <!-- Read-only display for calculated frequency or period -->
-
 
                                 <!-- Pulse Fall Time with ComboBox -->
                                 <DockPanel x:Name="PulseFallTimeDockPanel" Margin="0,5" Visibility="Collapsed">
@@ -278,7 +275,7 @@
                                         <DockPanel Margin="0,5">
                                             <Label Content="Harmonics:" Width="100" ToolTip="Turn harmonics function on or off"/>
                                             <ToggleButton x:Name="HarmonicsToggle" Content="Disabled" Width="80" Click="HarmonicsToggle_Click" 
-                          ToolTip="Toggle harmonics function on/off" HorizontalAlignment="Left"/>
+                                                          ToolTip="Toggle harmonics function on/off" HorizontalAlignment="Left"/>
                                         </DockPanel>
 
                                         <!-- Harmonic Amplitude Mode Selection -->
@@ -531,14 +528,7 @@
                                            
                                     </StackPanel>
                                 </GroupBox>
-                                <!-- End Harmonics -->
-                                <!-- End Harmonics -->
-                                <!-- End Harmonics -->
 
-                                <!-- Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section -->
-                                <!-- Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section -->
-                                <!-- Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section -->
-                                <!-- Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section -->
                                 <!-- Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section -->
                                 <!-- Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section -->
                                 <!-- Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section Dual Tone Section -->
@@ -547,108 +537,137 @@
                                 
                                 <!-- Add this GroupBox under the Harmonics GroupBox in MainWindow.xaml -->
                                 <!-- Enhanced Dual Tone GroupBox for MainWindow.xaml -->
-                                <GroupBox x:Name="DualToneGroupBox" Header="Dual Tone Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                <GroupBox x:Name="DualToneGroupBox" Header="Dual Tone Controls" Visibility="Collapsed" Margin="0,10,0,0" 
+          ToolTip="Configure a waveform with two simultaneous frequencies">
                                     <StackPanel>
                                         <!-- Control Mode Selection -->
                                         <DockPanel Margin="0,5">
-                                            <Label Content="Control Mode:" Width="120" ToolTip="Choose how to control the dual tone frequencies"/>
+                                            <Label Content="Control Mode:" Width="120" 
+                   ToolTip="Choose how to specify the dual tone frequencies"/>
                                             <RadioButton x:Name="DirectFrequencyMode" Content="Direct Frequencies" Margin="0,0,10,0" 
-                    IsChecked="True" GroupName="DualToneMode" Checked="DualToneModeChanged"
-                    ToolTip="Set Frequency 1 and Frequency 2 directly"/>
+                         IsChecked="True" GroupName="DualToneMode" Checked="DualToneModeChanged"
+                         ToolTip="Directly specify each frequency (F1 and F2) independently"/>
                                             <RadioButton x:Name="CenterOffsetMode" Content="Center/Offset" Margin="0,0,10,0" 
-                    GroupName="DualToneMode" Checked="DualToneModeChanged"
-                    ToolTip="Set center frequency and offset frequency"/>
+                         GroupName="DualToneMode" Checked="DualToneModeChanged"
+                         ToolTip="Specify the center frequency and the spacing between frequencies"/>
                                         </DockPanel>
 
                                         <!-- Direct Frequency Mode Panel -->
                                         <StackPanel x:Name="DirectFrequencyPanel" Visibility="Visible">
-                                            <!-- Primary Frequency (uses existing frequency controls) -->
+                                            <!-- Primary Frequency - Replace TextBlock with actual controls -->
                                             <DockPanel Margin="0,5">
-                                                <Label Content="Primary Freq:" Width="120" ToolTip="First frequency component (F1)"/>
-                                                <TextBlock Text="Use main frequency control above" Foreground="#FF505050" VerticalAlignment="Center"/>
+                                                <Label Content="Primary Freq:" Width="120" 
+                       ToolTip="First frequency component (F1) of the dual tone signal"/>
+                                                <TextBox x:Name="PrimaryFrequencyTextBox" Width="100" 
+                         TextChanged="PrimaryFrequencyTextBox_TextChanged" 
+                         Text="1000" 
+                         HorizontalContentAlignment="Right" 
+                         VerticalContentAlignment="Center"
+                         ToolTip="Enter the primary frequency (F1) value"/>
+                                                <ComboBox x:Name="PrimaryFrequencyUnitComboBox" Width="70" 
+                          Margin="5,0,0,0" 
+                          HorizontalAlignment="Left"
+                          SelectionChanged="PrimaryFrequencyUnitComboBox_SelectionChanged"
+                          ToolTip="Select the unit for the primary frequency">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
+                                                </ComboBox>
                                             </DockPanel>
 
                                             <!-- Secondary Frequency with Auto-Sync Option -->
                                             <DockPanel Margin="0,5">
-                                                <Label Content="Secondary Freq:" Width="120" ToolTip="Second frequency component (F2)"/>
+                                                <Label Content="Secondary Freq:" Width="120" 
+                       ToolTip="Second frequency component (F2) of the dual tone signal"/>
                                                 <CheckBox x:Name="SynchronizeFrequenciesCheckBox" Content="Auto-sync" Margin="0,0,10,0" 
-                                IsChecked="True" Checked="SynchronizeFrequenciesCheckBox_CheckedChanged" 
-                                Unchecked="SynchronizeFrequenciesCheckBox_CheckedChanged"
-                                ToolTip="Automatically synchronize secondary frequency to primary frequency"/>
+                          IsChecked="True" Checked="SynchronizeFrequenciesCheckBox_CheckedChanged" 
+                          Unchecked="SynchronizeFrequenciesCheckBox_CheckedChanged"
+                          ToolTip="When checked, F2 will automatically be calculated as a ratio of F1"/>
                                                 <ComboBox x:Name="FrequencyRatioComboBox" Width="70" 
-                            SelectionChanged="FrequencyRatioComboBox_SelectionChanged" 
-                            ToolTip="Ratio of secondary to primary frequency"
-                            IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}">
-                                                    <ComboBoxItem Content="1.5" />
-                                                    <ComboBoxItem Content="2.0" IsSelected="True" />
-                                                    <ComboBoxItem Content="3.0" />
-                                                    <ComboBoxItem Content="4.0" />
-                                                    <ComboBoxItem Content="5.0" />
+                          SelectionChanged="FrequencyRatioComboBox_SelectionChanged" 
+                          ToolTip="Ratio used to calculate F2 from F1 (F2 = F1 × Ratio)"
+                          IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}">
+                                                    <ComboBoxItem Content="1.5" ToolTip="F2 will be 1.5 times F1"/>
+                                                    <ComboBoxItem Content="2.0" IsSelected="True" ToolTip="F2 will be 2 times F1 (one octave higher)"/>
+                                                    <ComboBoxItem Content="3.0" ToolTip="F2 will be 3 times F1"/>
+                                                    <ComboBoxItem Content="4.0" ToolTip="F2 will be 4 times F1 (two octaves higher)"/>
+                                                    <ComboBoxItem Content="5.0" ToolTip="F2 will be 5 times F1"/>
                                                 </ComboBox>
                                                 <TextBlock Text="× Primary" Margin="5,0,0,0" VerticalAlignment="Center"
-    IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}"/>
+                           IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}"
+                           ToolTip="Secondary frequency = Primary frequency × Ratio"/>
                                             </DockPanel>
 
                                             <!-- Secondary Frequency Manual Control -->
                                             <DockPanel x:Name="SecondaryFrequencyDockPanel" Margin="0,5" IsEnabled="False">
                                                 <Label Content="" Width="120"/>
                                                 <TextBox x:Name="SecondaryFrequencyTextBox" Width="100" 
-                            TextChanged="SecondaryFrequencyTextBox_TextChanged" 
-                            Text="2000" 
-                            HorizontalContentAlignment="Right" 
-                            VerticalContentAlignment="Center"/>
+                         TextChanged="SecondaryFrequencyTextBox_TextChanged" 
+                         Text="2000" 
+                         HorizontalContentAlignment="Right" 
+                         VerticalContentAlignment="Center"
+                         ToolTip="Enter the secondary frequency (F2) value - only editable when Auto-sync is unchecked"/>
                                                 <ComboBox x:Name="SecondaryFrequencyUnitComboBox" Width="70" 
-                            Margin="5,0,0,0" 
-                            HorizontalAlignment="Left"
-                            SelectionChanged="SecondaryFrequencyUnitComboBox_SelectionChanged">
-                                                    <ComboBoxItem Content="µHz"/>
-                                                    <ComboBoxItem Content="mHz"/>
-                                                    <ComboBoxItem Content="Hz" IsSelected="True"/>
-                                                    <ComboBoxItem Content="kHz"/>
-                                                    <ComboBoxItem Content="MHz"/>
+                          Margin="5,0,0,0" 
+                          HorizontalAlignment="Left"
+                          SelectionChanged="SecondaryFrequencyUnitComboBox_SelectionChanged"
+                          ToolTip="Select the unit for the secondary frequency">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
                                                 </ComboBox>
                                             </DockPanel>
                                         </StackPanel>
 
                                         <!-- Center/Offset Mode Panel -->
                                         <StackPanel x:Name="CenterOffsetPanel" Visibility="Collapsed">
-                                            <!-- Center Frequency Control - Will be hidden when in Center/Offset mode -->
+                                            <!-- Center Frequency Control -->
                                             <DockPanel Margin="0,5">
-                                                <Label Content="Center Freq:" Width="120" ToolTip="Center frequency between F1 and F2"/>
+                                                <Label Content="Center Freq:" Width="120" 
+                       ToolTip="Middle frequency between F1 and F2 [(F1 + F2)/2]"/>
                                                 <TextBox x:Name="CenterFrequencyTextBox" Width="100" 
-                        TextChanged="CenterFrequencyTextBox_TextChanged" 
-                        Text="1500" 
-                        HorizontalContentAlignment="Right" 
-                        VerticalContentAlignment="Center"/>
+                         TextChanged="CenterFrequencyTextBox_TextChanged" 
+                         Text="1500" 
+                         HorizontalContentAlignment="Right" 
+                         VerticalContentAlignment="Center"
+                         ToolTip="Enter the center frequency - the midpoint between F1 and F2"/>
                                                 <ComboBox x:Name="CenterFrequencyUnitComboBox" Width="70" 
-                        Margin="5,0,0,0" 
-                        HorizontalAlignment="Left"
-                        SelectionChanged="CenterFrequencyUnitComboBox_SelectionChanged">
-                                                    <ComboBoxItem Content="µHz"/>
-                                                    <ComboBoxItem Content="mHz"/>
-                                                    <ComboBoxItem Content="Hz" IsSelected="True"/>
-                                                    <ComboBoxItem Content="kHz"/>
-                                                    <ComboBoxItem Content="MHz"/>
+                          Margin="5,0,0,0" 
+                          HorizontalAlignment="Left"
+                          SelectionChanged="CenterFrequencyUnitComboBox_SelectionChanged"
+                          ToolTip="Select the unit for the center frequency">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
                                                 </ComboBox>
                                             </DockPanel>
 
                                             <!-- Offset Frequency Control -->
                                             <DockPanel Margin="0,5">
-                                                <Label Content="Offset Freq:" Width="120" ToolTip="Frequency difference between F1 and F2"/>
+                                                <Label Content="Offset Freq:" Width="120" 
+                       ToolTip="Frequency difference between F1 and F2 (F2 - F1)"/>
                                                 <TextBox x:Name="OffsetFrequencyTextBox" Width="100" 
-                        TextChanged="OffsetFrequencyTextBox_TextChanged" 
-                        Text="1000" 
-                        HorizontalContentAlignment="Right" 
-                        VerticalContentAlignment="Center"/>
+                         TextChanged="OffsetFrequencyTextBox_TextChanged" 
+                         Text="1000" 
+                         HorizontalContentAlignment="Right" 
+                         VerticalContentAlignment="Center"
+                         ToolTip="Enter the frequency offset - the separation between F1 and F2"/>
                                                 <ComboBox x:Name="OffsetFrequencyUnitComboBox" Width="70" 
-                        Margin="5,0,0,0" 
-                        HorizontalAlignment="Left"
-                        SelectionChanged="OffsetFrequencyUnitComboBox_SelectionChanged">
-                                                    <ComboBoxItem Content="µHz"/>
-                                                    <ComboBoxItem Content="mHz"/>
-                                                    <ComboBoxItem Content="Hz" IsSelected="True"/>
-                                                    <ComboBoxItem Content="kHz"/>
-                                                    <ComboBoxItem Content="MHz"/>
+                          Margin="5,0,0,0" 
+                          HorizontalAlignment="Left"
+                          SelectionChanged="OffsetFrequencyUnitComboBox_SelectionChanged"
+                          ToolTip="Select the unit for the frequency offset">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
                                                 </ComboBox>
                                             </DockPanel>
 
@@ -663,23 +682,32 @@
                                                     <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
 
-                                                <Label Content="Calculated F1:" Grid.Row="0" Grid.Column="0"/>
+                                                <Label Content="Calculated F1:" Grid.Row="0" Grid.Column="0" 
+                       ToolTip="First frequency component, calculated as: Center - (Offset/2)"/>
                                                 <TextBlock x:Name="CalculatedF1Display" Text="1000 Hz" Grid.Row="0" Grid.Column="1" 
-                        VerticalAlignment="Center" Foreground="#FF505050"/>
+                           VerticalAlignment="Center" Foreground="#FF505050"
+                           ToolTip="The resulting F1 frequency based on center and offset values"/>
 
-                                                <Label Content="Calculated F2:" Grid.Row="1" Grid.Column="0"/>
+                                                <Label Content="Calculated F2:" Grid.Row="1" Grid.Column="0" 
+                       ToolTip="Second frequency component, calculated as: Center + (Offset/2)"/>
                                                 <TextBlock x:Name="CalculatedF2Display" Text="2000 Hz" Grid.Row="1" Grid.Column="1" 
-                        VerticalAlignment="Center" Foreground="#FF505050"/>
+                           VerticalAlignment="Center" Foreground="#FF505050"
+                           ToolTip="The resulting F2 frequency based on center and offset values"/>
                                             </Grid>
                                         </StackPanel>
 
                                         <!-- Information Text -->
-                                        <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontStyle="Italic" Foreground="#FF505050">
-Dual tone generates two frequencies simultaneously. You can control them directly or by center/offset.
-Center = (F1 + F2)/2, Offset = F2 - F1.
+                                        <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontStyle="Italic" Foreground="#FF505050"
+                   ToolTip="Explanation of the relationship between frequencies in dual tone mode">
+            Dual tone generates two frequencies simultaneously. You can control them directly or by center/offset.
+            Center = (F1 + F2)/2, Offset = F2 - F1. Changes are applied automatically.
                                         </TextBlock>
                                     </StackPanel>
                                 </GroupBox>
+
+
+
+
                                 <!-- End Dual Tone -->
                                 <!-- End Dual Tone -->
                                 <!-- End Dual Tone -->

@@ -76,6 +76,11 @@ namespace DG2072_USB_Control.Continuous.DualTone
             _calculatedF2Display = mainWindow.FindName("CalculatedF2Display") as TextBlock;
             _secondaryFrequencyDockPanel = mainWindow.FindName("SecondaryFrequencyDockPanel") as DockPanel;
 
+            _primaryFrequencyTextBox = mainWindow.FindName("PrimaryFrequencyTextBox") as TextBox;
+            _primaryFrequencyUnitComboBox = mainWindow.FindName("PrimaryFrequencyUnitComboBox") as ComboBox;
+
+
+
             // Main frequency controls (needed for synchronization)
             _primaryFrequencyTextBox = mainWindow.FindName("ChannelFrequencyTextBox") as TextBox;
             _primaryFrequencyUnitComboBox = mainWindow.FindName("ChannelFrequencyUnitComboBox") as ComboBox;
@@ -408,9 +413,11 @@ namespace DG2072_USB_Control.Continuous.DualTone
                     if (!double.TryParse(_primaryFrequencyTextBox.Text, out double frequency))
                         return;
 
+
                     string freqUnit = UnitConversionUtility.GetFrequencyUnit(_primaryFrequencyUnitComboBox);
                     double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
                     double actualPrimaryFrequency = frequency * freqMultiplier;
+
 
                     // Get secondary frequency
                     double actualSecondaryFrequency = actualPrimaryFrequency * _frequencyRatio; // Default
