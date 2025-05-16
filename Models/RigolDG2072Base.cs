@@ -1204,6 +1204,25 @@ namespace DG2072_USB_Control
         }
 
         // Enhanced method to get all dual tone parameters
+        /// <summary>
+        /// Calculates the center frequency from two individual frequencies
+        /// </summary>
+        private double CalculateCenterFrequency(double f1, double f2)
+        {
+            return (f1 + f2) / 2.0;
+        }
+
+        /// <summary>
+        /// Calculates the offset frequency from two individual frequencies
+        /// </summary>
+        private double CalculateOffsetFrequency(double f1, double f2)
+        {
+            return f2 - f1;
+        }
+
+        /// <summary>
+        /// Enhanced method to get all dual tone parameters
+        /// </summary>
         public Dictionary<string, double> GetAllDualToneParameters(int channel)
         {
             try
@@ -1238,7 +1257,8 @@ namespace DG2072_USB_Control
                     // If not supported, calculate from individual frequencies
                     if (parameters.ContainsKey("Frequency1") && parameters.ContainsKey("Frequency2"))
                     {
-                        parameters["CenterFrequency"] = (parameters["Frequency1"] + parameters["Frequency2"]) / 2.0;
+                        parameters["CenterFrequency"] = CalculateCenterFrequency(
+                            parameters["Frequency1"], parameters["Frequency2"]);
                     }
                 }
 
@@ -1255,11 +1275,11 @@ namespace DG2072_USB_Control
                     // If not supported, calculate from individual frequencies
                     if (parameters.ContainsKey("Frequency1") && parameters.ContainsKey("Frequency2"))
                     {
-                        parameters["OffsetFrequency"] = parameters["Frequency2"] - parameters["Frequency1"];
+                        parameters["OffsetFrequency"] = CalculateOffsetFrequency(
+                            parameters["Frequency1"], parameters["Frequency2"]);
                     }
                 }
 
-                // Get other parameters
                 // Get other parameters
                 string ampResponse = SendQuery($"SOURce{channel}:VOLTage?");
                 if (double.TryParse(ampResponse, out double amplitude))
@@ -1272,7 +1292,6 @@ namespace DG2072_USB_Control
                 {
                     parameters["Offset"] = voltageOffset;
                 }
-
 
                 string phaseResponse = SendQuery($"SOURce{channel}:PHASe?");
                 if (double.TryParse(phaseResponse, out double phase))

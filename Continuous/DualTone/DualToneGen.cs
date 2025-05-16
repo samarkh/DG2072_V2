@@ -470,11 +470,9 @@ namespace DG2072_USB_Control.Continuous.DualTone
                     f2Hz = f2 * UnitConversionUtility.GetFrequencyMultiplier(f2Unit);
                 }
 
-                // Calculate center frequency (F1 + F2)/2
-                double centerFreqHz = (f1Hz + f2Hz) / 2.0;
-
-                // Calculate offset frequency F2 - F1
-                double offsetFreqHz = f2Hz - f1Hz;
+                // Use helper methods to calculate center and offset
+                double centerFreqHz = CalculateCenterFrequency(f1Hz, f2Hz);
+                double offsetFreqHz = CalculateOffsetFrequency(f1Hz, f2Hz);
 
                 // Update UI with calculated values using UnitConversionUtility for proper unit conversion
                 string centerUnit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
@@ -526,11 +524,9 @@ namespace DG2072_USB_Control.Continuous.DualTone
                     offsetFreqHz = offset * UnitConversionUtility.GetFrequencyMultiplier(offsetUnit);
                 }
 
-                // Calculate F1 and F2 from center and offset
-                // Center = (F1 + F2)/2, Offset = F2 - F1
-                // F1 = Center - Offset/2, F2 = Center + Offset/2
-                double f1Hz = centerFreqHz - (offsetFreqHz / 2.0);
-                double f2Hz = centerFreqHz + (offsetFreqHz / 2.0);
+                // Use helper methods to calculate F1 and F2
+                double f1Hz = CalculateF1FromCenterOffset(centerFreqHz, offsetFreqHz);
+                double f2Hz = CalculateF2FromCenterOffset(centerFreqHz, offsetFreqHz);
 
                 // Update the calculated values display
                 _calculatedF1Display.Text = $"{UnitConversionUtility.FormatWithMinimumDecimals(f1Hz)} Hz";
@@ -582,6 +578,41 @@ namespace DG2072_USB_Control.Continuous.DualTone
         #endregion
 
         #region Helper Methods
+
+
+        /// <summary>
+        /// Calculates the center frequency from two individual frequencies
+        /// </summary>
+        private double CalculateCenterFrequency(double f1, double f2)
+        {
+            return (f1 + f2) / 2.0;
+        }
+
+        /// <summary>
+        /// Calculates the offset frequency from two individual frequencies
+        /// </summary>
+        private double CalculateOffsetFrequency(double f1, double f2)
+        {
+            return f2 - f1;
+        }
+
+        /// <summary>
+        /// Calculates f1 from center and offset frequencies
+        /// </summary>
+        private double CalculateF1FromCenterOffset(double center, double offset)
+        {
+            return center - (offset / 2.0);
+        }
+
+        /// <summary>
+        /// Calculates f2 from center and offset frequencies
+        /// </summary>
+        private double CalculateF2FromCenterOffset(double center, double offset)
+        {
+            return center + (offset / 2.0);
+        }
+
+
 
         // Helper for adjusting frequency and unit display using UnitConversionUtility
         private void AdjustFrequencyAndUnit(TextBox textBox, ComboBox unitComboBox)
