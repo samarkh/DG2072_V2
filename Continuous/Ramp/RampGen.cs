@@ -6,47 +6,73 @@ using DG2072_USB_Control.Services;
 
 namespace DG2072_USB_Control.Continuous.Ramp
 {
-    public class RampGen : IRampEventHandler
+    public class RampGen : WaveformGenerator
     {
-        // Device reference
-        private readonly RigolDG2072 _device;
-
-        // Active channel
-        private int _activeChannel;
-
-        // UI elements
+        // UI elements specific to Ramp
         private readonly TextBox _symmetryTextBox;
 
-        // Update timer for debouncing
+        // Timer for debouncing
         private DispatcherTimer _symmetryUpdateTimer;
-
-        // Event for logging
-        public event EventHandler<string> LogEvent;
 
         // Constructor
         public RampGen(RigolDG2072 device, int channel, Window mainWindow)
+            : base(device, channel, mainWindow)
         {
-            _device = device;
-            _activeChannel = channel;
-
-            // Initialize UI references
+            // Find UI elements
             _symmetryTextBox = mainWindow.FindName("Symm") as TextBox;
         }
 
-        // Property for the active channel
-        public int ActiveChannel
+        #region WaveformGenerator Overrides
+
+        // Implement required abstract methods from WaveformGenerator
+        public override void ApplyParameters()
         {
-            get => _activeChannel;
-            set => _activeChannel = value;
+            if (!IsDeviceConnected()) return;
+
+            try
+            {
+                // Apply symmetry
+                if (double.TryParse(_symmetryTextBox.Text, out double symmetry))
+                {
+                    Device.SetSymmetry(ActiveChannel, symmetry);
+                    Log($"Applied ramp symmetry for CH{ActiveChannel}: {symmetry}%");
+                }
+
+                // Apply standard waveform parameters using base class helper methods
+                double frequency = GetFrequencyFromUI();
+                double amplitude = GetAmplitudeFromUI();
+                double offset = GetOffsetFromUI();
+                double phase = GetPhaseFromUI();
+
+                // Apply waveform with parameters
+                Device.ApplyWaveform(ActiveChannel, "RAMP", frequency, amplitude, offset, phase);
+                Log($"Applied ramp waveform to CH{ActiveChannel} with Freq={frequency}Hz, Amp={amplitude}Vpp, Offset={offset}V, Phase={phase}°");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error applying ramp parameters: {ex.Message}");
+            }
         }
 
-        // Log helper method
-        private void Log(string message)
+        public override void RefreshParameters()
         {
-            LogEvent?.Invoke(this, message);
+            if (!IsDeviceConnected()) return;
+
+            try
+            {
+                // Update symmetry value from device
+                UpdateSymmetryValue();
+                Log($"Refreshed ramp parameters for CH{ActiveChannel}");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error refreshing ramp parameters: {ex.Message}");
+            }
         }
 
-        #region IRampEventHandler Implementation
+        #endregion
+
+        #region Event Handlers
 
         public void OnSymmetryTextChanged(object sender, TextChangedEventArgs e)
         {
@@ -54,51 +80,45 @@ namespace DG2072_USB_Control.Continuous.Ramp
             if (!double.TryParse(_symmetryTextBox.Text, out double symmetry)) return;
 
             // Use a timer to debounce rapid changes
-            if (_symmetryUpdateTimer == null)
-            {
-                _symmetryUpdateTimer = new DispatcherTimer
+            CreateOrResetTimer(ref _symmetryUpdateTimer, () => {
+                if (double.TryParse(_symmetryTextBox.Text, out double symm))
                 {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _symmetryUpdateTimer.Tick += (s, args) =>
-                {
-                    _symmetryUpdateTimer.Stop();
-                    if (double.TryParse(_symmetryTextBox.Text, out double sym))
-                    {
-                        ApplySymmetry(sym);
-                    }
-                };
-            }
-
-            _symmetryUpdateTimer.Stop();
-            _symmetryUpdateTimer.Start();
+                    ApplySymmetry(symm);
+                }
+            });
         }
 
         public void OnSymmetryLostFocus(object sender, RoutedEventArgs e)
         {
-            if (!IsDeviceConnected()) return;
             if (double.TryParse(_symmetryTextBox.Text, out double symmetry))
             {
-                // Ensure value is in valid range
-                symmetry = Math.Max(0, Math.Min(100, symmetry));
+                // Format the value
                 _symmetryTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(symmetry);
 
-                // Apply the value
+                // Apply the formatted value
                 ApplySymmetry(symmetry);
             }
         }
 
         #endregion
 
-        #region Core Functionality
+        #region Helper Methods
 
-        // Check if the device is connected
-        private bool IsDeviceConnected()
+        public void UpdateSymmetryValue()
         {
-            return _device != null && _device.IsConnected;
+            if (!IsDeviceConnected() || _symmetryTextBox == null) return;
+
+            try
+            {
+                double symmetry = Device.GetSymmetry(ActiveChannel);
+                _symmetryTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(symmetry);
+            }
+            catch (Exception ex)
+            {
+                Log($"Error updating symmetry value: {ex.Message}");
+            }
         }
 
-        // Apply symmetry value to the device
         private void ApplySymmetry(double symmetry)
         {
             if (!IsDeviceConnected()) return;
@@ -108,56 +128,13 @@ namespace DG2072_USB_Control.Continuous.Ramp
                 // Ensure symmetry is within valid range (0-100%)
                 symmetry = Math.Max(0, Math.Min(100, symmetry));
 
-                // Apply to the device
-                _device.SetSymmetry(_activeChannel, symmetry);
-                Log($"Set CH{_activeChannel} symmetry to {symmetry}%");
+                // Set the symmetry
+                Device.SetSymmetry(ActiveChannel, symmetry);
+                Log($"Set ramp symmetry to {symmetry}%");
             }
             catch (Exception ex)
             {
                 Log($"Error applying symmetry: {ex.Message}");
-            }
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        // Update symmetry value in the UI from device
-        public void UpdateSymmetryValue()
-        {
-            if (!IsDeviceConnected()) return;
-
-            try
-            {
-                // Only update if the waveform is Ramp
-                string currentWaveform = _device.SendQuery($":SOUR{_activeChannel}:FUNC?").Trim().ToUpper();
-                if (currentWaveform.Contains("RAMP"))
-                {
-                    double symmetry = _device.GetSymmetry(_activeChannel);
-                    _symmetryTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(symmetry);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"Error updating symmetry value: {ex.Message}");
-            }
-        }
-
-        // Apply all ramp parameters
-        public void ApplyRampParameters()
-        {
-            if (!IsDeviceConnected()) return;
-
-            try
-            {
-                if (double.TryParse(_symmetryTextBox.Text, out double symmetry))
-                {
-                    ApplySymmetry(symmetry);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"Error applying ramp parameters: {ex.Message}");
             }
         }
 
