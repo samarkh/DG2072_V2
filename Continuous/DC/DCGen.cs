@@ -6,15 +6,9 @@ using DG2072_USB_Control.Services;
 
 namespace DG2072_USB_Control.Continuous.DC
 {
-    public class DCGen : IDCEventHandler
+    public class DCGen : WaveformGenerator, IDCEventHandler
     {
-        // Device reference
-        private readonly RigolDG2072 _device;
-
-        // Active channel
-        private int _activeChannel;
-
-        // UI elements
+        // UI elements specific to DC
         private readonly TextBox _dcVoltageTextBox;
         private readonly ComboBox _dcVoltageUnitComboBox;
         private readonly ComboBox _dcImpedanceComboBox;
@@ -22,32 +16,14 @@ namespace DG2072_USB_Control.Continuous.DC
         // Update timer for debouncing
         private DispatcherTimer _dcVoltageUpdateTimer;
 
-        // Event for logging
-        public event EventHandler<string> LogEvent;
-
         // Constructor
         public DCGen(RigolDG2072 device, int channel, Window mainWindow)
+            : base(device, channel, mainWindow)
         {
-            _device = device;
-            _activeChannel = channel;
-
             // Initialize UI references
             _dcVoltageTextBox = mainWindow.FindName("DCVoltageTextBox") as TextBox;
             _dcVoltageUnitComboBox = mainWindow.FindName("DCVoltageUnitComboBox") as ComboBox;
             _dcImpedanceComboBox = mainWindow.FindName("DCImpedanceComboBox") as ComboBox;
-        }
-
-        // Property for the active channel
-        public int ActiveChannel
-        {
-            get => _activeChannel;
-            set => _activeChannel = value;
-        }
-
-        // Log helper method
-        private void Log(string message)
-        {
-            LogEvent?.Invoke(this, message);
         }
 
         #region IDCEventHandler Implementation
@@ -58,24 +34,12 @@ namespace DG2072_USB_Control.Continuous.DC
             if (!double.TryParse(_dcVoltageTextBox.Text, out double voltage)) return;
 
             // Use a timer to debounce rapid changes
-            if (_dcVoltageUpdateTimer == null)
-            {
-                _dcVoltageUpdateTimer = new DispatcherTimer
+            CreateOrResetTimer(ref _dcVoltageUpdateTimer, () => {
+                if (double.TryParse(_dcVoltageTextBox.Text, out double volt))
                 {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _dcVoltageUpdateTimer.Tick += (s, args) =>
-                {
-                    _dcVoltageUpdateTimer.Stop();
-                    if (double.TryParse(_dcVoltageTextBox.Text, out double volt))
-                    {
-                        ApplyDCVoltage(volt);
-                    }
-                };
-            }
-
-            _dcVoltageUpdateTimer.Stop();
-            _dcVoltageUpdateTimer.Start();
+                    ApplyDCVoltage(volt);
+                }
+            });
         }
 
         public void OnDCVoltageLostFocus(object sender, RoutedEventArgs e)
@@ -113,7 +77,7 @@ namespace DG2072_USB_Control.Continuous.DC
                 if (impedanceStr == "High-Z")
                 {
                     // Set to high impedance
-                    _device.SendCommand($":OUTP{_activeChannel}:IMP INF");
+                    Device.SendCommand($":OUTP{ActiveChannel}:IMP INF");
                 }
                 else if (impedanceStr.EndsWith("Ω"))
                 {
@@ -138,10 +102,10 @@ namespace DG2072_USB_Control.Continuous.DC
                     }
 
                     // Apply the impedance setting
-                    _device.SendCommand($":OUTP{_activeChannel}:IMP {impedance}");
+                    Device.SendCommand($":OUTP{ActiveChannel}:IMP {impedance}");
                 }
 
-                Log($"Set output impedance for channel {_activeChannel} to {impedanceStr}");
+                Log($"Set output impedance for channel {ActiveChannel} to {impedanceStr}");
 
                 // After changing impedance, we need to reapply the DC voltage
                 // since the voltage displayed may change based on load impedance
@@ -162,12 +126,6 @@ namespace DG2072_USB_Control.Continuous.DC
 
         #region Core Functionality
 
-        // Check if the device is connected
-        private bool IsDeviceConnected()
-        {
-            return _device != null && _device.IsConnected;
-        }
-
         // Apply DC voltage to the device
         private void ApplyDCVoltage(double voltage)
         {
@@ -176,12 +134,95 @@ namespace DG2072_USB_Control.Continuous.DC
             try
             {
                 // For DC, we use the APPLY:DC command with placeholders for frequency and amplitude
-                _device.SetDCVoltage(_activeChannel, voltage);
-                Log($"Set DC voltage for channel {_activeChannel} to {voltage} V");
+                Device.SetDCVoltage(ActiveChannel, voltage);
+                Log($"Set DC voltage for channel {ActiveChannel} to {voltage} V");
             }
             catch (Exception ex)
             {
                 Log($"Error applying DC voltage: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region WaveformGenerator Overrides
+
+        /// <summary>
+        /// Apply all DC parameters
+        /// </summary>
+        public override void ApplyParameters()
+        {
+            if (!IsDeviceConnected()) return;
+
+            try
+            {
+                // Apply DC voltage
+                if (double.TryParse(_dcVoltageTextBox.Text, out double voltage))
+                {
+                    string unitStr = ((ComboBoxItem)_dcVoltageUnitComboBox.SelectedItem).Content.ToString();
+                    double multiplier = unitStr == "mV" ? 0.001 : 1.0;
+                    ApplyDCVoltage(voltage * multiplier);
+                }
+
+                // Apply impedance setting
+                if (_dcImpedanceComboBox.SelectedItem != null)
+                {
+                    string impedanceStr = ((ComboBoxItem)_dcImpedanceComboBox.SelectedItem).Content.ToString();
+                    if (impedanceStr == "High-Z")
+                    {
+                        Device.SetOutputImpedanceHighZ(ActiveChannel);
+                    }
+                    else
+                    {
+                        double impedance = 50.0; // Default
+
+                        // Parse the value
+                        if (impedanceStr.Contains("k"))
+                        {
+                            // kOhm value
+                            if (double.TryParse(impedanceStr.Replace("kΩ", ""), out double kOhms))
+                            {
+                                impedance = kOhms * 1000;
+                            }
+                        }
+                        else
+                        {
+                            // Ohm value
+                            if (double.TryParse(impedanceStr.Replace("Ω", ""), out double ohms))
+                            {
+                                impedance = ohms;
+                            }
+                        }
+
+                        Device.SetOutputImpedance(ActiveChannel, impedance);
+                    }
+                }
+
+                Log($"Applied DC parameters to CH{ActiveChannel}");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error applying DC parameters: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Refresh all DC settings from the device
+        /// </summary>
+        public override void RefreshParameters()
+        {
+            if (!IsDeviceConnected()) return;
+
+            try
+            {
+                UpdateDCVoltageValue();
+                UpdateImpedanceSelection();
+
+                Log($"Refreshed DC parameters for CH{ActiveChannel}");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error refreshing DC parameters: {ex.Message}");
             }
         }
 
@@ -196,7 +237,7 @@ namespace DG2072_USB_Control.Continuous.DC
 
             try
             {
-                double dcVoltage = _device.GetDCVoltage(_activeChannel);
+                double dcVoltage = Device.GetDCVoltage(ActiveChannel);
 
                 // Check current unit setting and adjust displayed value
                 string unit = ((ComboBoxItem)_dcVoltageUnitComboBox.SelectedItem).Content.ToString();
@@ -222,7 +263,7 @@ namespace DG2072_USB_Control.Continuous.DC
 
             try
             {
-                double impedance = _device.GetOutputImpedance(_activeChannel);
+                double impedance = Device.GetOutputImpedance(ActiveChannel);
 
                 // Select the appropriate impedance in the combo box
                 if (double.IsInfinity(impedance))
@@ -287,68 +328,10 @@ namespace DG2072_USB_Control.Continuous.DC
             }
         }
 
-        // Apply all DC parameters
-        public void ApplyDCParameters()
-        {
-            if (!IsDeviceConnected()) return;
-
-            try
-            {
-                // Apply DC voltage
-                if (double.TryParse(_dcVoltageTextBox.Text, out double voltage))
-                {
-                    string unitStr = ((ComboBoxItem)_dcVoltageUnitComboBox.SelectedItem).Content.ToString();
-                    double multiplier = unitStr == "mV" ? 0.001 : 1.0;
-                    ApplyDCVoltage(voltage * multiplier);
-                }
-
-                // Apply impedance setting
-                if (_dcImpedanceComboBox.SelectedItem != null)
-                {
-                    string impedanceStr = ((ComboBoxItem)_dcImpedanceComboBox.SelectedItem).Content.ToString();
-                    if (impedanceStr == "High-Z")
-                    {
-                        _device.SetOutputImpedanceHighZ(_activeChannel);
-                    }
-                    else
-                    {
-                        double impedance = 50.0; // Default
-
-                        // Parse the value
-                        if (impedanceStr.Contains("k"))
-                        {
-                            // kOhm value
-                            if (double.TryParse(impedanceStr.Replace("kΩ", ""), out double kOhms))
-                            {
-                                impedance = kOhms * 1000;
-                            }
-                        }
-                        else
-                        {
-                            // Ohm value
-                            if (double.TryParse(impedanceStr.Replace("Ω", ""), out double ohms))
-                            {
-                                impedance = ohms;
-                            }
-                        }
-
-                        _device.SetOutputImpedance(_activeChannel, impedance);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"Error applying DC parameters: {ex.Message}");
-            }
-        }
-
-        // Refresh all DC settings from the device
+        // Maintain existing method for backward compatibility
         public void RefreshDCSettings()
         {
-            if (!IsDeviceConnected()) return;
-
-            UpdateDCVoltageValue();
-            UpdateImpedanceSelection();
+            RefreshParameters();
         }
 
         #endregion

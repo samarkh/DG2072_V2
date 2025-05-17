@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Windows;
+using System.Windows;           // Add this for Window class
 using DG2072_USB_Control.Services;
 
 namespace DG2072_USB_Control.Continuous.Noise
