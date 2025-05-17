@@ -1,64 +1,32 @@
 ﻿using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Threading;
 using DG2072_USB_Control.Services;
 
 namespace DG2072_USB_Control.Continuous.Noise
 {
-    public class NoiseGen : INoiseEventHandler
+    public class NoiseGen : WaveformGenerator, INoiseEventHandler
     {
-        // Device reference
-        private readonly RigolDG2072 _device;
-
-        // Active channel
-        private int _activeChannel;
-
-        // Event for logging
-        public event EventHandler<string> LogEvent;
-
-        // Constructor
         public NoiseGen(RigolDG2072 device, int channel, Window mainWindow)
+            : base(device, channel, mainWindow)
         {
-            _device = device;
-            _activeChannel = channel;
         }
 
-        // Property for the active channel
-        public int ActiveChannel
-        {
-            get => _activeChannel;
-            set => _activeChannel = value;
-        }
-
-        // Log helper method
-        private void Log(string message)
-        {
-            LogEvent?.Invoke(this, message);
-        }
-
-        #region Core Functionality
-
-        // Check if the device is connected
-        private bool IsDeviceConnected()
-        {
-            return _device != null && _device.IsConnected;
-        }
-
-        // Apply noise waveform
-        public void ApplyNoiseParameters()
+        /// <summary>
+        /// Apply noise waveform parameters
+        /// </summary>
+        public override void ApplyParameters()
         {
             if (!IsDeviceConnected()) return;
 
             try
             {
                 // Get current parameters
-                double amplitude = _device.GetAmplitude(_activeChannel);
-                double offset = _device.GetOffset(_activeChannel);
+                double amplitude = GetAmplitudeFromUI();
+                double offset = GetOffsetFromUI();
 
                 // Apply noise waveform with current amplitude and offset
-                _device.SendCommand($":SOURCE{_activeChannel}:APPLY:NOIS {amplitude},{offset}");
-                Log($"Applied Noise waveform to CH{_activeChannel} with " +
+                Device.SendCommand($":SOURCE{ActiveChannel}:APPLY:NOIS {amplitude},{offset}");
+                Log($"Applied Noise waveform to CH{ActiveChannel} with " +
                     $"Amp={UnitConversionUtility.FormatWithMinimumDecimals(amplitude)}Vpp, " +
                     $"Offset={UnitConversionUtility.FormatWithMinimumDecimals(offset)}V");
             }
@@ -68,8 +36,10 @@ namespace DG2072_USB_Control.Continuous.Noise
             }
         }
 
-        // Refresh noise settings from the device
-        public void RefreshNoiseParameters()
+        /// <summary>
+        /// Refresh the noise parameters from the device
+        /// </summary>
+        public override void RefreshParameters()
         {
             if (!IsDeviceConnected()) return;
 
@@ -77,15 +47,12 @@ namespace DG2072_USB_Control.Continuous.Noise
             {
                 // For Noise waveforms, we only have amplitude and offset parameters
                 // which are already handled by MainWindow.
-                // This method exists for consistency with other waveform generators.
-                Log($"Refreshed Noise parameters for CH{_activeChannel}");
+                Log($"Refreshed Noise parameters for CH{ActiveChannel}");
             }
             catch (Exception ex)
             {
                 Log($"Error refreshing noise parameters: {ex.Message}");
             }
         }
-
-        #endregion
     }
 }

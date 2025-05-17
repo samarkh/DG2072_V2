@@ -1481,7 +1481,7 @@ namespace DG2072_USB_Control
                 try
                 {
                     // Delegate to the DC generator
-                    dcGenerator.ApplyDCParameters();
+                    dcGenerator.ApplyParameters();
 
                     // Verify the waveform was set correctly
                     string verifyWaveform = rigolDG2072.SendQuery($":SOUR{activeChannel}:FUNC?").Trim().ToUpper();
@@ -1504,7 +1504,7 @@ namespace DG2072_USB_Control
             else if (waveform == "NOISE" && noiseGenerator != null)
             {
                 // Delegate to the noise generator
-                noiseGenerator.ApplyNoiseParameters();
+                noiseGenerator.ApplyParameters();
             }
             else
             {
@@ -1714,7 +1714,7 @@ namespace DG2072_USB_Control
                 // Handle waveform-specific parameters first
                 if (waveform == "PULSE" && pulseGenerator != null)
                 {
-                    pulseGenerator.ApplyPulseParameters();
+                    pulseGenerator.ApplyParameters();
                 }
                 else
                 {
@@ -1814,7 +1814,7 @@ namespace DG2072_USB_Control
             {
                 case "RAMP":
                     if (rampGenerator != null)
-                        rampGenerator.ApplyRampParameters();
+                        rampGenerator.ApplyParameters();
                     break;
 
                 case "SQUARE":
