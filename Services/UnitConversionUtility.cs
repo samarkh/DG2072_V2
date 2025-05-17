@@ -209,8 +209,70 @@ namespace DG2072_USB_Control.Services
             return $"{parts[0]}.{decimals}";
         }
 
+        /// <summary>
+        /// Adjusts a value and unit based on auto-ranging rules
+        /// </summary>
+        public static void AdjustValueAndUnit(TextBox textBox, ComboBox unitComboBox, string[] units,
+            Func<double, string, double> toBaseUnit, Func<double, string, double> fromBaseUnit)
+        {
+            if (textBox == null || unitComboBox == null) return;
+            if (!double.TryParse(textBox.Text, out double value)) return;
 
+            try
+            {
+                string currentUnit = ((ComboBoxItem)unitComboBox.SelectedItem)?.Content.ToString();
+                if (string.IsNullOrEmpty(currentUnit)) return;
 
+                // Convert to base unit
+                double baseValue = toBaseUnit(value, currentUnit);
+
+                // Find the unit index
+                int unitIndex = 0;
+                for (int i = 0; i < units.Length; i++)
+                {
+                    if (units[i] == currentUnit)
+                    {
+                        unitIndex = i;
+                        break;
+                    }
+                }
+
+                // Calculate display value in the current unit
+                double displayValue = fromBaseUnit(baseValue, units[unitIndex]);
+
+                // Auto-range: handle values that are too large
+                while (displayValue > 9999 && unitIndex < units.Length - 1)
+                {
+                    unitIndex++;
+                    displayValue = fromBaseUnit(baseValue, units[unitIndex]);
+                }
+
+                // Auto-range: handle values that are too small
+                while (displayValue < 0.1 && unitIndex > 0)
+                {
+                    unitIndex--;
+                    displayValue = fromBaseUnit(baseValue, units[unitIndex]);
+                }
+
+                // Update the textbox with formatted value
+                textBox.Text = FormatWithMinimumDecimals(displayValue);
+
+                // Find and select the unit in the combo box
+                for (int i = 0; i < unitComboBox.Items.Count; i++)
+                {
+                    ComboBoxItem item = unitComboBox.Items[i] as ComboBoxItem;
+                    if (item != null && item.Content.ToString() == units[unitIndex])
+                    {
+                        unitComboBox.SelectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                // In case of error, leave as is
+            }
+        }
 
         /// <summary>
         /// Gets the offset unit string from a ComboBox selection
