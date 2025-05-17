@@ -348,12 +348,12 @@ namespace DG2072_USB_Control
 
                 // Approach 1: Use direct APPLY command with all parameters
                 // This is the most comprehensive approach and should set everything at once
-                SendCommand($"SOURce{channel}:APPLy:DUALTone {frequency},{amplitude},{offset},{phase}");
-                System.Threading.Thread.Sleep(100);
+                //SendCommand($"SOURce{channel}:APPLy:DUALTone {frequency},{amplitude},{offset},{phase}");
+                //System.Threading.Thread.Sleep(100);
 
-                // Then explicitly set the second frequency
-                SendCommand($"SOURce{channel}:FUNCtion:DUALTONE:FREQ2 {frequency2}");
-                System.Threading.Thread.Sleep(50);
+                //// Then explicitly set the second frequency
+                //SendCommand($"SOURce{channel}:FUNCtion:DUALTONE:FREQ2 {frequency2}");
+                //System.Threading.Thread.Sleep(50);
 
                 // Approach 2: Set each parameter individually to ensure they're applied
                 // Some devices require setting parameters after mode selection

@@ -214,18 +214,10 @@ namespace DG2072_USB_Control.Continuous.DualTone
                 DockPanel centerFreqPanel = _centerOffsetPanel.Children[0] as DockPanel;
                 if (centerFreqPanel != null)
                 {
-                    // When in Center/Offset mode, hide the dedicated Center Freq control
-                    // since we'll use the main frequency control instead
-                    //centerFreqPanel.Visibility = isDirectMode ? Visibility.Visible : Visibility.Collapsed;
+                    // Always ensure the Center Freq control is visible
                     centerFreqPanel.Visibility = Visibility.Visible;
                 }
             }
-
-            // Modify main frequency label to show appropriate text based on mode
-            //if (_frequencyLabel != null)
-            //{
-            //    _frequencyLabel.Content = isDirectMode ? "Frequency:" : "Center Freq:";
-            //}
 
             // If switching modes, update the displayed values
             if (isDirectMode)
@@ -238,19 +230,12 @@ namespace DG2072_USB_Control.Continuous.DualTone
                 // Calculate center and offset from current F1 and F2
                 UpdateCenterOffsetFromFrequencies();
 
-                // When switching to Center/Offset mode, copy center value to main frequency control
-                if (double.TryParse(_centerFrequencyTextBox.Text, out double centerFreq))
-                {
-                    string unit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
-
-                    // Update main frequency control
-                    _primaryFrequencyTextBox.Text = centerFreq.ToString();
-
-                    // Try to match units if possible
-                    SelectMatchingUnit(_primaryFrequencyUnitComboBox, unit);
-                }
+                // Do NOT copy center value to primary frequency control
+                // Keep the primary frequency control completely separate
             }
         }
+
+
 
         // Helper method to select matching unit in a ComboBox
         private void SelectMatchingUnit(ComboBox unitComboBox, string unitToMatch)
@@ -506,21 +491,9 @@ namespace DG2072_USB_Control.Continuous.DualTone
                 // Get current center and offset frequencies in Hz
                 double centerFreqHz = 0, offsetFreqHz = 0;
 
-                // In Center/Offset mode, read center frequency from main control
-                if (_directFrequencyMode.IsChecked != true && _primaryFrequencyTextBox != null)
-                {
-                    if (double.TryParse(_primaryFrequencyTextBox.Text, out double center))
-                    {
-                        string centerUnit = UnitConversionUtility.GetFrequencyUnit(_primaryFrequencyUnitComboBox);
-                        centerFreqHz = center * UnitConversionUtility.GetFrequencyMultiplier(centerUnit);
-
-                        // Update the center frequency control to match
-                        string centerDisplayUnit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
-                        double displayValue = UnitConversionUtility.ConvertFromMicroHz(centerFreqHz * 1e6, centerDisplayUnit);
-                        _centerFrequencyTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(displayValue);
-                    }
-                }
-                else if (double.TryParse(_centerFrequencyTextBox.Text, out double center))
+                // Always use the Center Frequency TextBox in Center/Offset mode
+                // Do NOT use the primary frequency control 
+                if (double.TryParse(_centerFrequencyTextBox.Text, out double center))
                 {
                     string centerUnit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
                     centerFreqHz = center * UnitConversionUtility.GetFrequencyMultiplier(centerUnit);
@@ -557,25 +530,30 @@ namespace DG2072_USB_Control.Continuous.DualTone
             {
                 // Get amplitude, offset, phase from MainWindow
                 double amplitude = GetAmplitudeFromUI();
-                double offset = GetOffsetFromUI();
+                double voltageOffset = GetOffsetFromUI();
                 double phase = GetPhaseFromUI();
 
                 // Create parameters dictionary for the device
                 Dictionary<string, object> parameters = new Dictionary<string, object>
-                {
-                    { "Frequency", f1Hz },
-                    { "Frequency2", f2Hz },
-                    { "Amplitude", amplitude },
-                    { "Offset", offset },
-                    { "Phase", phase }
-                };
+        {
+            { "Frequency", f1Hz },
+            { "Frequency2", f2Hz },
+            { "Amplitude", amplitude },
+            { "Offset", voltageOffset },
+            { "Phase", phase }
+        };
 
                 // Apply the dual tone waveform
                 _device.ApplyDualToneWaveform(_activeChannel, parameters);
 
+                // Calculate center and frequency offset using the same formula as the UI
+                double centerFreq = (f1Hz + f2Hz) / 2.0;
+                double freqOffset = (f2Hz - f1Hz) / 2.0;  // Half the distance between frequencies
+
+                // Fixed log message with correctly calculated offset
                 Log($"Applied Dual Tone waveform to CH{_activeChannel} with F1={f1Hz}Hz, F2={f2Hz}Hz, " +
-                    $"Center={(f1Hz + f2Hz) / 2}Hz, Offset={f2Hz - f1Hz}Hz, " +
-                    $"Amp={amplitude}Vpp, Offset={offset}V, Phase={phase}°");
+                    $"Center={centerFreq}Hz, Freq Offset={freqOffset}Hz, " +
+                    $"Amp={amplitude}Vpp, Voltage Offset={voltageOffset}V, Phase={phase}°");
             }
             catch (Exception ex)
             {
@@ -601,8 +579,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
         /// </summary>
         private double CalculateOffsetFrequency(double f1, double f2)
         {
-            //return (f2 - f1);
-            return (f2 - f1) / 2.0;  // New formula - half the distance between tones
+            return (f2 - f1) / 2.0;  // Half the distance between tones (distance from center to each tone)
         }
 
         /// <summary>
@@ -610,8 +587,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
         /// </summary>
         private double CalculateF1FromCenterOffset(double center, double offset)
         {
-            //return center - (offset / 2.0);
-            return center - offset;  // New formula
+            return center - offset;  // Offset is distance from center to each tone
         }
 
         /// <summary>
@@ -619,8 +595,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
         /// </summary>
         private double CalculateF2FromCenterOffset(double center, double offset)
         {
-            //return center + (offset / 2.0);
-            return center + offset;  // New formula
+            return center + offset;  // Offset is distance from center to each tone
         }
 
 
