@@ -196,7 +196,7 @@ namespace DG2072_USB_Control
                 string waveform = ((ComboBoxItem)ChannelWaveformComboBox.SelectedItem).Content.ToString().ToUpper();
                 if (waveform == "SINE" && sineGenerator != null)
                 {
-                    sineGenerator.RefreshSineParameters();
+                    sineGenerator.RefreshParameters(); // New way using base class method
                 }
 
                 // Special handling for DC waveform
@@ -1497,8 +1497,7 @@ namespace DG2072_USB_Control
             // Add the sine generator code here
             else if (waveform == "SINE" && sineGenerator != null)
             {
-                // Delegate to the sine generator
-                sineGenerator.ApplySineParameters();
+                sineGenerator.ApplyParameters(); // New way using base class method
             }
 
             // Add the Noise generator code here

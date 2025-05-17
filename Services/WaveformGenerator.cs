@@ -79,10 +79,14 @@ namespace DG2072_USB_Control.Services
             if (timer == null)
             {
                 timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(delayMs) };
+
+                // Create a local copy of the timer to avoid capturing the ref parameter
+                DispatcherTimer localTimer = timer;
+                Action localAction = action;
                 timer.Tick += (s, args) =>
                 {
-                    timer.Stop();
-                    action();
+                    localTimer.Stop();
+                    localAction();
                 };
             }
 

@@ -83,5 +83,9 @@ namespace DG2072_USB_Control.Continuous.Sinusoid
         }
 
         #endregion
+
+        // For backward compatibility with MainWindow.xaml.cs
+        public void ApplySineParameters() => ApplyParameters();
+        public void RefreshSineParameters() => RefreshParameters();
     }
 }
