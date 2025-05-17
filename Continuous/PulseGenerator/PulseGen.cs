@@ -457,24 +457,23 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
         {
             if (!IsDeviceConnected()) return;
 
+            // Toggle visibility of panels based on selected mode
             if (_frequencyModeActive)
             {
                 // In Frequency mode, show frequency controls, hide period controls
-                _frequencyTextBox.Visibility = Visibility.Visible;
-                _frequencyUnitComboBox.Visibility = Visibility.Visible;
-                _pulsePeriodDockPanel.Visibility = Visibility.Collapsed;
+                if (_pulseWidthDockPanel != null)
+                    _pulseWidthDockPanel.Visibility = Visibility.Visible;
+                if (_pulsePeriodDockPanel != null)
+                    _pulsePeriodDockPanel.Visibility = Visibility.Collapsed;
             }
             else
             {
                 // In Period mode, show period controls, hide frequency controls
-                _frequencyTextBox.Visibility = Visibility.Collapsed;
-                _frequencyUnitComboBox.Visibility = Visibility.Collapsed;
-                _pulsePeriodDockPanel.Visibility = Visibility.Visible;
+                if (_pulseWidthDockPanel != null)
+                    _pulseWidthDockPanel.Visibility = Visibility.Collapsed;
+                if (_pulsePeriodDockPanel != null)
+                    _pulsePeriodDockPanel.Visibility = Visibility.Visible;
             }
-
-            // Always ensure the Pulse Width control is visible regardless of mode
-            if (_pulseWidthDockPanel != null)
-                _pulseWidthDockPanel.Visibility = Visibility.Visible;
         }
 
         /// <summary>
@@ -848,8 +847,7 @@ namespace DG2072_USB_Control.Continuous.PulseGenerator
 
         public void OnPulseRateModeToggleClicked(object sender, RoutedEventArgs e)
         {
-            // Toggle the current mode
-            SetFrequencyMode(!_frequencyModeActive);
+            // Implementation
         }
 
         public void OnPulsePeriodUnitChanged(object sender, SelectionChangedEventArgs e)
