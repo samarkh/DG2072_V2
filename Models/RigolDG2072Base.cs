@@ -2149,15 +2149,28 @@ namespace DG2072_USB_Control
         {
             try
             {
-                // Apply DC waveform with specified voltage
-                // Per documentation, we need placeholders for frequency and amplitude
-                SendCommand($":SOURCE{channel}:APPLY:DC 1,1,{voltage}");
+                // Use VOLTAGE:OFFSET command instead of APPLY:DC
+                SendCommand($":SOURCE{channel}:VOLTAGE:OFFSET {voltage}");
             }
             catch (Exception ex)
             {
                 throw new Exception($"Error setting DC voltage for channel {channel}: {ex.Message}");
             }
         }
+
+        //public void SetDCVoltage(int channel, double voltage)
+        //{
+        //    try
+        //    {
+        //        // Apply DC waveform with specified voltage
+        //        // Per documentation, we need placeholders for frequency and amplitude
+        //        SendCommand($":SOURCE{channel}:APPLY:DC 1,1,{voltage}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception($"Error setting DC voltage for channel {channel}: {ex.Message}");
+        //    }
+        //}
 
         public void SetOutputImpedance(int channel, double impedance)
         {
