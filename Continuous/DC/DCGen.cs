@@ -47,7 +47,7 @@ namespace DG2072_USB_Control.Continuous.DC
             if (!IsDeviceConnected()) return;
             if (double.TryParse(_dcVoltageTextBox.Text, out double voltage))
             {
-                // Format the value with the appropriate number of decimal places
+                // Format the value with appropriate number of decimal places
                 _dcVoltageTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(voltage);
 
                 // Apply the formatted value

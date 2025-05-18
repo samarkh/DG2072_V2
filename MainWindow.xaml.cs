@@ -203,12 +203,12 @@ namespace DG2072_USB_Control
                 if (waveform == "DC" && dcGenerator != null)
                 {
                     // Delegate to DC generator for handling DC-specific settings
-                    dcGenerator.RefreshDCSettings();
+                    dcGenerator.RefreshParameters(); // Updated to use base class method
 
                     // Update output state
                     UpdateOutputState(ChannelOutputToggle, activeChannel);
                 }
- 
+
                 // Special handling for PULSE waveform - delegate to pulseGenerator
                 else if (waveform == "PULSE" && pulseGenerator != null)
                 {
