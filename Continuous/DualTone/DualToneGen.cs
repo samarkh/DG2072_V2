@@ -695,7 +695,6 @@ namespace DG2072_USB_Control.Continuous.DualTone
             {
                 return phase;
             }
-
             return 0.0; // Default 0°
         }
 
