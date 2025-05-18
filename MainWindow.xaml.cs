@@ -1108,70 +1108,142 @@ namespace DG2072_USB_Control.Modulation
             _mainWindow = mainWindow;
         }
 
-        public override void ApplyParameters()
+        #endregion
+
+        #region Harmonics Event Handlers
+        
+        private void AmplitudeModeChanged(object sender, RoutedEventArgs e)
+        {
+            // The event is defined in the XAML file to be handled by MainWindow
+            // Forward it to the HarmonicsUIController
+            if (_harmonicsUIController != null)
+            {
+                // Use reflection to call the method since it's private in HarmonicsUIController
+                typeof(HarmonicsUIController).GetMethod("AmplitudeModeChanged",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .Invoke(_harmonicsUIController, new object[] { sender, e });
+            }
+        }
+
+        private void HarmonicAmplitudeUnitComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                ComboBox comboBox = sender as ComboBox;
+                if (comboBox != null && int.TryParse(comboBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Forward the event to the harmonics controller
+                    _harmonicsUIController.GetType().GetMethod("HarmonicAmplitudeUnitComboBox_SelectionChanged",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        ?.Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+        private void HarmonicCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                // Extract the harmonic number from the Tag property
+                CheckBox checkBox = sender as CheckBox;
+                if (checkBox != null && int.TryParse(checkBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Use reflection to call the method
+                    typeof(HarmonicsUIController).GetMethod("HarmonicCheckBox_Changed",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+        private void HarmonicAmplitudeTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                // Extract the harmonic number from the Tag property
+                TextBox textBox = sender as TextBox;
+                if (textBox != null && int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Use reflection to call the method
+                    typeof(HarmonicsUIController).GetMethod("HarmonicAmplitudeTextBox_LostFocus",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+        private void HarmonicPhaseTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_harmonicsUIController != null)
+            {
+                // Extract the harmonic number from the Tag property
+                TextBox textBox = sender as TextBox;
+                if (textBox != null && int.TryParse(textBox.Tag.ToString(), out int harmonicNumber))
+                {
+                    // Use reflection to call the method
+                    typeof(HarmonicsUIController).GetMethod("HarmonicPhaseTextBox_LostFocus",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .Invoke(_harmonicsUIController, new object[] { sender, e, harmonicNumber });
+                }
+            }
+        }
+
+        private void RefreshHarmonicSettings()
         {
             try
             {
-                // Implement applying AM parameters
-                LogMessage("Applied AM modulation parameters");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying AM parameters: {ex.Message}");
+                _harmonicsUIController.RefreshHarmonicSettings();
             }
         }
 
-        public override void RefreshParameters()
+        private void ResetHarmonicValues()
         {
+            _harmonicsUIController?.ResetHarmonicValues();
+        }
+
+        private void SetHarmonicUIElementsState(bool enabled)
+        {
+            _harmonicsUIController?.SetHarmonicUIElementsState(enabled);
+        }
+
+        private void HarmonicsToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if (!isConnected) return;
+
+            bool isEnabled = HarmonicsToggle.IsChecked == true;
+            HarmonicsToggle.Content = isEnabled ? "ENABLED" : "DISABLED";
+
             try
             {
-                // Implement refreshing AM parameters from device
-                LogMessage("Refreshed AM modulation parameters");
+                if (isEnabled)
+                {
+                    // Enable harmonics on the device
+                    rigolDG2072.SetHarmonicState(activeChannel, true);
+                    LogMessage($"Harmonics enabled for Channel {activeChannel}");
+                }
+                else
+                {
+                    // Disable harmonics on the device
+                    rigolDG2072.SetHarmonicState(activeChannel, false);
+                    LogMessage($"Harmonics disabled for Channel {activeChannel}");
+                }
             }
             catch (Exception ex)
             {
-                LogMessage($"Error refreshing AM parameters: {ex.Message}");
+                LogMessage($"Error toggling harmonics: {ex.Message}");
             }
         }
-    }
 
-    // FM Modulation class
-    public class FMModulation : ModulationBase
-    {
-        private MainWindow _mainWindow;
+        #endregion
 
-        public FMModulation(RigolDG2072 device, int activeChannel, MainWindow mainWindow)
-            : base(device, activeChannel)
+        #region Arbitrary Waveform Handlers
+
+        // Event handler for parameter text changes
+        private void ArbitraryParamTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            _mainWindow = mainWindow;
+            if (arbitraryWaveformGen != null)
+                arbitraryWaveformGen.OnParameterTextChanged(sender, e);
         }
-
-        public override void ApplyParameters()
-        {
-            try
-            {
-                // Implement applying FM parameters
-                LogMessage("Applied FM modulation parameters");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error applying FM parameters: {ex.Message}");
-            }
-        }
-
-        public override void RefreshParameters()
-        {
-            try
-            {
-                // Implement refreshing FM parameters from device
-                LogMessage("Refreshed FM modulation parameters");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error refreshing FM parameters: {ex.Message}");
-            }
-        }
-    }
 
     // PM Modulation class (stub)
     public class PMModulation : ModulationBase
