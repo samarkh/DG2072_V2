@@ -37,7 +37,11 @@ namespace DG2072_USB_Control.Continuous.DC
             CreateOrResetTimer(ref _dcVoltageUpdateTimer, () => {
                 if (double.TryParse(_dcVoltageTextBox.Text, out double volt))
                 {
-                    ApplyDCVoltage(volt);
+                    // Add these two lines to perform unit conversion
+                    string unitStr = ((ComboBoxItem)_dcVoltageUnitComboBox.SelectedItem).Content.ToString();
+                    double multiplier = unitStr == "mV" ? 0.001 : 1.0;  // Convert mV to V if needed
+
+                    ApplyDCVoltage(volt * multiplier);
                 }
             });
         }
@@ -50,8 +54,11 @@ namespace DG2072_USB_Control.Continuous.DC
                 // Format the value with appropriate number of decimal places
                 _dcVoltageTextBox.Text = UnitConversionUtility.FormatWithMinimumDecimals(voltage);
 
-                // Apply the formatted value
-                ApplyDCVoltage(voltage);
+                // Add these two lines to perform unit conversion
+                string unitStr = ((ComboBoxItem)_dcVoltageUnitComboBox.SelectedItem).Content.ToString();
+                double multiplier = unitStr == "mV" ? 0.001 : 1.0;  // Convert mV to V if needed
+
+                ApplyDCVoltage(voltage * multiplier);
             }
         }
 
