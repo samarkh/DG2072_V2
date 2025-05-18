@@ -1,22 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 using DG2072_USB_Control.Services;
+using System.Collections.Generic;
 
 namespace DG2072_USB_Control.Continuous.DualTone
 {
-    public class DualToneGen : IDualToneEventHandler
+    public class DualToneGen : WaveformGenerator, IDualToneEventHandler
     {
-        // Device reference
-        private readonly RigolDG2072 _device;
-
-        // Active channel
-        private int _activeChannel;
-
-        // UI elements
+        // UI elements - keeping all the existing UI elements
         private readonly TextBox _secondaryFrequencyTextBox;
         private readonly ComboBox _secondaryFrequencyUnitComboBox;
         private readonly CheckBox _synchronizeFrequenciesCheckBox;
@@ -45,20 +39,13 @@ namespace DG2072_USB_Control.Continuous.DualTone
         // Add a private field to store the frequency label
         private readonly Label _frequencyLabel;
 
-
         // Settings
         private double _frequencyRatio = 2.0; // Default frequency ratio
 
-        // Event for logging
-        public event EventHandler<string> LogEvent;
-
         // Constructor
-        // Update the constructor to find the frequency label
         public DualToneGen(RigolDG2072 device, int channel, Window mainWindow)
+            : base(device, channel, mainWindow) // Call the base constructor
         {
-            _device = device;
-            _activeChannel = channel;
-
             // Initialize UI references
             _secondaryFrequencyTextBox = mainWindow.FindName("SecondaryFrequencyTextBox") as TextBox;
             _secondaryFrequencyUnitComboBox = mainWindow.FindName("SecondaryFrequencyUnitComboBox") as ComboBox;
@@ -79,8 +66,6 @@ namespace DG2072_USB_Control.Continuous.DualTone
             _primaryFrequencyTextBox = mainWindow.FindName("PrimaryFrequencyTextBox") as TextBox;
             _primaryFrequencyUnitComboBox = mainWindow.FindName("PrimaryFrequencyUnitComboBox") as ComboBox;
 
-
-
             // Main frequency controls (needed for synchronization)
             _primaryFrequencyTextBox = mainWindow.FindName("ChannelFrequencyTextBox") as TextBox;
             _primaryFrequencyUnitComboBox = mainWindow.FindName("ChannelFrequencyUnitComboBox") as ComboBox;
@@ -93,45 +78,49 @@ namespace DG2072_USB_Control.Continuous.DualTone
             }
         }
 
-        // Property for the active channel
-        public int ActiveChannel
+        #region WaveformGenerator Abstract Method Implementations
+
+        /// <summary>
+        /// Implementation of abstract method from WaveformGenerator base class
+        /// Apply all dual tone parameters
+        /// </summary>
+        public override void ApplyParameters()
         {
-            get => _activeChannel;
-            set => _activeChannel = value;
+            if (!IsDeviceConnected()) return;
+
+            // Simply call the existing method that handles the application of parameters
+            ApplyDualToneParameters();
         }
 
-        // Log helper method
-        private void Log(string message)
+        /// <summary>
+        /// Implementation of abstract method from WaveformGenerator base class
+        /// Refresh dual tone settings from device
+        /// </summary>
+        public override void RefreshParameters()
         {
-            LogEvent?.Invoke(this, message);
+            if (!IsDeviceConnected()) return;
+
+            // Call the existing method that refreshes parameters from the device
+            RefreshDualToneSettings();
         }
+
+        #endregion
 
         #region IDualToneEventHandler Implementation
 
+        // Keeping all the existing event handler methods
         public void OnSecondaryFrequencyTextChanged(object sender, TextChangedEventArgs e)
         {
             if (!IsDeviceConnected()) return;
             if (!double.TryParse(_secondaryFrequencyTextBox.Text, out double _)) return;
 
-            // Use a timer to debounce rapid changes
-            if (_secondaryFrequencyUpdateTimer == null)
-            {
-                _secondaryFrequencyUpdateTimer = new DispatcherTimer
+            // Use base class timer method instead of local implementation
+            CreateOrResetTimer(ref _secondaryFrequencyUpdateTimer, () => {
+                if (double.TryParse(_secondaryFrequencyTextBox.Text, out double _))
                 {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _secondaryFrequencyUpdateTimer.Tick += (s, args) =>
-                {
-                    _secondaryFrequencyUpdateTimer.Stop();
-                    if (double.TryParse(_secondaryFrequencyTextBox.Text, out double _))
-                    {
-                        ApplyDualToneParameters();
-                    }
-                };
-            }
-
-            _secondaryFrequencyUpdateTimer.Stop();
-            _secondaryFrequencyUpdateTimer.Start();
+                    ApplyDualToneParameters();
+                }
+            });
         }
 
         public void OnSecondaryFrequencyLostFocus(object sender, RoutedEventArgs e)
@@ -196,7 +185,6 @@ namespace DG2072_USB_Control.Continuous.DualTone
             }
         }
 
-        // Update the OnDualToneModeChanged method to modify the frequency label
         public void OnDualToneModeChanged(object sender, RoutedEventArgs e)
         {
             if (!IsDeviceConnected()) return;
@@ -229,31 +217,8 @@ namespace DG2072_USB_Control.Continuous.DualTone
             {
                 // Calculate center and offset from current F1 and F2
                 UpdateCenterOffsetFromFrequencies();
-
-                // Do NOT copy center value to primary frequency control
-                // Keep the primary frequency control completely separate
             }
         }
-
-
-
-        // Helper method to select matching unit in a ComboBox
-        private void SelectMatchingUnit(ComboBox unitComboBox, string unitToMatch)
-        {
-            if (unitComboBox != null)
-            {
-                foreach (var item in unitComboBox.Items)
-                {
-                    ComboBoxItem comboItem = item as ComboBoxItem;
-                    if (comboItem != null && comboItem.Content.ToString() == unitToMatch)
-                    {
-                        unitComboBox.SelectedItem = comboItem;
-                        break;
-                    }
-                }
-            }
-        }
-
 
         public void OnCenterFrequencyTextChanged(object sender, TextChangedEventArgs e)
         {
@@ -261,21 +226,10 @@ namespace DG2072_USB_Control.Continuous.DualTone
             if (!double.TryParse(_centerFrequencyTextBox.Text, out double _)) return;
             if (_centerOffsetMode.IsChecked != true) return;
 
-            if (_centerFrequencyUpdateTimer == null)
-            {
-                _centerFrequencyUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _centerFrequencyUpdateTimer.Tick += (s, args) =>
-                {
-                    _centerFrequencyUpdateTimer.Stop();
-                    UpdateFrequenciesFromCenterOffset();
-                };
-            }
-
-            _centerFrequencyUpdateTimer.Stop();
-            _centerFrequencyUpdateTimer.Start();
+            // Use base class method for timer management
+            CreateOrResetTimer(ref _centerFrequencyUpdateTimer, () => {
+                UpdateFrequenciesFromCenterOffset();
+            });
         }
 
         public void OnCenterFrequencyLostFocus(object sender, RoutedEventArgs e)
@@ -305,21 +259,10 @@ namespace DG2072_USB_Control.Continuous.DualTone
             if (!double.TryParse(_offsetFrequencyTextBox.Text, out double _)) return;
             if (_centerOffsetMode.IsChecked != true) return;
 
-            if (_offsetFrequencyUpdateTimer == null)
-            {
-                _offsetFrequencyUpdateTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(500)
-                };
-                _offsetFrequencyUpdateTimer.Tick += (s, args) =>
-                {
-                    _offsetFrequencyUpdateTimer.Stop();
-                    UpdateFrequenciesFromCenterOffset();
-                };
-            }
-
-            _offsetFrequencyUpdateTimer.Stop();
-            _offsetFrequencyUpdateTimer.Start();
+            // Use base class method for timer management
+            CreateOrResetTimer(ref _offsetFrequencyUpdateTimer, () => {
+                UpdateFrequenciesFromCenterOffset();
+            });
         }
 
         public void OnOffsetFrequencyLostFocus(object sender, RoutedEventArgs e)
@@ -346,13 +289,6 @@ namespace DG2072_USB_Control.Continuous.DualTone
         #endregion
 
         #region Core Functionality
-
-        // Check if the device is connected
-        private bool IsDeviceConnected()
-        {
-            return _device != null && _device.IsConnected;
-        }
-
         // Update the secondary frequency based on the primary frequency and ratio
         public void UpdateSecondaryFrequencyForDualTone()
         {
@@ -399,11 +335,9 @@ namespace DG2072_USB_Control.Continuous.DualTone
                     if (!double.TryParse(_primaryFrequencyTextBox.Text, out double frequency))
                         return;
 
-
                     string freqUnit = UnitConversionUtility.GetFrequencyUnit(_primaryFrequencyUnitComboBox);
                     double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
                     double actualPrimaryFrequency = frequency * freqMultiplier;
-
 
                     // Get secondary frequency
                     double actualSecondaryFrequency = actualPrimaryFrequency * _frequencyRatio; // Default
@@ -414,7 +348,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
                         actualSecondaryFrequency = secondaryFreq * secondaryFreqMultiplier;
                     }
 
-                    // Get amplitude, offset, phase
+                    // Get amplitude, offset, phase using base class methods
                     double amplitude = GetAmplitudeFromUI();
                     double offset = GetOffsetFromUI();
                     double phase = GetPhaseFromUI();
@@ -430,9 +364,9 @@ namespace DG2072_USB_Control.Continuous.DualTone
                     };
 
                     // Apply the dual tone waveform
-                    _device.ApplyDualToneWaveform(_activeChannel, parameters);
+                    Device.ApplyDualToneWaveform(ActiveChannel, parameters);
 
-                    Log($"Applied Dual Tone waveform to CH{_activeChannel} with Primary Freq={frequency} {freqUnit}, " +
+                    Log($"Applied Dual Tone waveform to CH{ActiveChannel} with Primary Freq={frequency} {freqUnit}, " +
                         $"Secondary Freq={_secondaryFrequencyTextBox.Text} {UnitConversionUtility.GetFrequencyUnit(_secondaryFrequencyUnitComboBox)}, " +
                         $"Amp={amplitude}Vpp, Offset={offset}V, Phase={phase}°");
                 }
@@ -483,7 +417,6 @@ namespace DG2072_USB_Control.Continuous.DualTone
         }
 
         // Calculate F1 and F2 from center and offset
-        // Update UpdateFrequenciesFromCenterOffset method to sync with main frequency control
         public void UpdateFrequenciesFromCenterOffset()
         {
             try
@@ -492,7 +425,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
                 double centerFreqHz = 0, offsetFreqHz = 0;
 
                 // Always use the Center Frequency TextBox in Center/Offset mode
-                // Do NOT use the primary frequency control 
+                // Do NOT use the primary frequency control
                 if (double.TryParse(_centerFrequencyTextBox.Text, out double center))
                 {
                     string centerUnit = UnitConversionUtility.GetFrequencyUnit(_centerFrequencyUnitComboBox);
@@ -522,36 +455,35 @@ namespace DG2072_USB_Control.Continuous.DualTone
             }
         }
 
-
         // Apply dual tone with specific frequencies
         private void ApplyDualToneWithFrequencies(double f1Hz, double f2Hz)
         {
             try
             {
-                // Get amplitude, offset, phase from MainWindow
+                // Get amplitude, offset, phase using base class methods
                 double amplitude = GetAmplitudeFromUI();
                 double voltageOffset = GetOffsetFromUI();
                 double phase = GetPhaseFromUI();
 
                 // Create parameters dictionary for the device
                 Dictionary<string, object> parameters = new Dictionary<string, object>
-        {
-            { "Frequency", f1Hz },
-            { "Frequency2", f2Hz },
-            { "Amplitude", amplitude },
-            { "Offset", voltageOffset },
-            { "Phase", phase }
-        };
+                {
+                    { "Frequency", f1Hz },
+                    { "Frequency2", f2Hz },
+                    { "Amplitude", amplitude },
+                    { "Offset", voltageOffset },
+                    { "Phase", phase }
+                };
 
                 // Apply the dual tone waveform
-                _device.ApplyDualToneWaveform(_activeChannel, parameters);
+                Device.ApplyDualToneWaveform(ActiveChannel, parameters);
 
                 // Calculate center and frequency offset using the same formula as the UI
                 double centerFreq = (f1Hz + f2Hz) / 2.0;
                 double freqOffset = (f2Hz - f1Hz) / 2.0;  // Half the distance between frequencies
 
                 // Fixed log message with correctly calculated offset
-                Log($"Applied Dual Tone waveform to CH{_activeChannel} with F1={f1Hz}Hz, F2={f2Hz}Hz, " +
+                Log($"Applied Dual Tone waveform to CH{ActiveChannel} with F1={f1Hz}Hz, F2={f2Hz}Hz, " +
                     $"Center={centerFreq}Hz, Freq Offset={freqOffset}Hz, " +
                     $"Amp={amplitude}Vpp, Voltage Offset={voltageOffset}V, Phase={phase}°");
             }
@@ -564,7 +496,6 @@ namespace DG2072_USB_Control.Continuous.DualTone
         #endregion
 
         #region Helper Methods
-
 
         /// <summary>
         /// Calculates the center frequency from two individual frequencies
@@ -598,9 +529,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
             return center + offset;  // Offset is distance from center to each tone
         }
 
-
-
-        // Helper for adjusting frequency and unit display using UnitConversionUtility
+        // Helper for adjusting frequency and unit display
         private void AdjustFrequencyAndUnit(TextBox textBox, ComboBox unitComboBox)
         {
             if (!double.TryParse(textBox.Text, out double value))
@@ -658,54 +587,21 @@ namespace DG2072_USB_Control.Continuous.DualTone
             }
         }
 
-        // Helper methods to get values from UI
-        private double GetAmplitudeFromUI()
+        // Helper method to select matching unit in a ComboBox
+        private void SelectMatchingUnit(ComboBox unitComboBox, string unitToMatch)
         {
-            TextBox amplitudeTextBox = FindControl("ChannelAmplitudeTextBox") as TextBox;
-            ComboBox amplitudeUnitComboBox = FindControl("ChannelAmplitudeUnitComboBox") as ComboBox;
-
-            if (amplitudeTextBox != null && amplitudeUnitComboBox != null &&
-                double.TryParse(amplitudeTextBox.Text, out double amplitude))
+            if (unitComboBox != null)
             {
-                string ampUnit = UnitConversionUtility.GetAmplitudeUnit(amplitudeUnitComboBox);
-                double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                return amplitude * ampMultiplier;
+                foreach (var item in unitComboBox.Items)
+                {
+                    ComboBoxItem comboItem = item as ComboBoxItem;
+                    if (comboItem != null && comboItem.Content.ToString() == unitToMatch)
+                    {
+                        unitComboBox.SelectedItem = comboItem;
+                        break;
+                    }
+                }
             }
-
-            return 1.0; // Default 1Vpp
-        }
-
-        private double GetOffsetFromUI()
-        {
-            TextBox offsetTextBox = FindControl("ChannelOffsetTextBox") as TextBox;
-
-            if (offsetTextBox != null && double.TryParse(offsetTextBox.Text, out double offset))
-            {
-                return offset;
-            }
-
-            return 0.0; // Default 0V
-        }
-
-        private double GetPhaseFromUI()
-        {
-            TextBox phaseTextBox = FindControl("ChannelPhaseTextBox") as TextBox;
-
-            if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out double phase))
-            {
-                return phase;
-            }
-            return 0.0; // Default 0°
-        }
-
-        private object FindControl(string controlName)
-        {
-            if (_directFrequencyPanel != null)
-            {
-                Window mainWindow = Window.GetWindow(_directFrequencyPanel);
-                return mainWindow?.FindName(controlName);
-            }
-            return null;
         }
 
         // Update frequency ratio combobox based on the actual ratio
@@ -747,7 +643,7 @@ namespace DG2072_USB_Control.Continuous.DualTone
             try
             {
                 // Get all dual tone parameters
-                var parameters = _device.GetAllDualToneParameters(_activeChannel);
+                var parameters = Device.GetAllDualToneParameters(ActiveChannel);
 
                 // Update primary frequency (from main controls)
                 if (parameters.TryGetValue("Frequency1", out double freq1))
