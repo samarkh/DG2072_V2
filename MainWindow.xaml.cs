@@ -2760,14 +2760,14 @@ namespace DG2072_USB_Control
             if (arbitraryWaveformGen != null)
             {
                 arbitraryWaveformGen.ActiveChannel = channel;
-                arbitraryWaveformGen.RefreshArbitraryWaveformSettings();
+                arbitraryWaveformGen.RefreshParameters(); // Now uses the base class method
             }
         }
 
         private void ApplyArbitraryWaveformButton_Click(object sender, RoutedEventArgs e)
         {
             if (arbitraryWaveformGen != null)
-                arbitraryWaveformGen.OnApplyButtonClick(sender, e);
+                arbitraryWaveformGen.ApplyParameters(); // Now uses the base class method
         }
 
         #endregion

@@ -6,18 +6,10 @@ using System.Windows.Threading;
 using DG2072_USB_Control.Services;
 using DG2072_USB_Control.Continuous.ArbitraryWaveform.Descriptions;
 
-
-
 namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
 {
-    public class ArbitraryWaveformGen : IArbitraryWaveformEventHandler
+    public class ArbitraryWaveformGen : WaveformGenerator, IArbitraryWaveformEventHandler
     {
-        // Device reference
-        private readonly RigolDG2072 _device;
-
-        // Active channel
-        private int _activeChannel;
-
         // UI elements
         private readonly ComboBox _categoryComboBox;
         private readonly ComboBox _waveformComboBox;
@@ -33,21 +25,15 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         private readonly Label _param2Label;
         private readonly Button _applyButton;
         private readonly TextBlock _waveformApplicationsTextBlock;
-        
 
         // Update timers for debouncing
         private DispatcherTimer _param1UpdateTimer;
         private DispatcherTimer _param2UpdateTimer;
 
-        // Event for logging
-        public event EventHandler<string> LogEvent;
-
         // Constructor
         public ArbitraryWaveformGen(RigolDG2072 device, int channel, Window mainWindow)
+            : base(device, channel, mainWindow)
         {
-            _device = device;
-            _activeChannel = channel;
-
             // Initialize UI references
             _applyButton = mainWindow.FindName("ApplyArbitraryWaveformButton") as Button;
             _categoryComboBox = mainWindow.FindName("ArbitraryWaveformCategoryComboBox") as ComboBox;
@@ -73,19 +59,29 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
             InitializeArbitraryWaveformControls();
         }
 
+        #region WaveformGenerator Abstract Methods Implementation
 
-        // Property for the active channel
-        public int ActiveChannel
+        /// <summary>
+        /// Override from base class to apply arbitrary waveform parameters
+        /// </summary>
+        public override void ApplyParameters()
         {
-            get => _activeChannel;
-            set => _activeChannel = value;
+            if (!IsDeviceConnected()) return;
+
+            ApplyArbitraryWaveform();
         }
 
-        // Log helper method
-        private void Log(string message)
+        /// <summary>
+        /// Override from base class to refresh arbitrary waveform settings from device
+        /// </summary>
+        public override void RefreshParameters()
         {
-            LogEvent?.Invoke(this, message);
+            if (!IsDeviceConnected()) return;
+
+            RefreshArbitraryWaveformSettings();
         }
+
+        #endregion
 
         #region IArbitraryWaveformEventHandler Implementation
 
@@ -138,48 +134,26 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
 
             if (textBox == _param1TextBox)
             {
-                if (_param1UpdateTimer == null)
+                // Use base class helper method for timer management
+                CreateOrResetTimer(ref _param1UpdateTimer, () =>
                 {
-                    _param1UpdateTimer = new DispatcherTimer
+                    if (double.TryParse(_param1TextBox.Text, out double param))
                     {
-                        Interval = TimeSpan.FromMilliseconds(500)
-                    };
-                    _param1UpdateTimer.Tick += (s, args) =>
-                    {
-                        _param1UpdateTimer.Stop();
-                        if (double.TryParse(_param1TextBox.Text, out double param))
-                        {
-                            // Update will happen when Apply button is clicked
-                            Log($"Parameter 1 set to {param}");
-                        }
-                    };
-                }
-                timer = _param1UpdateTimer;
+                        // Update will happen when Apply button is clicked
+                        Log($"Parameter 1 set to {param}");
+                    }
+                });
             }
             else if (textBox == _param2TextBox)
             {
-                if (_param2UpdateTimer == null)
+                // Use base class helper method for timer management
+                CreateOrResetTimer(ref _param2UpdateTimer, () =>
                 {
-                    _param2UpdateTimer = new DispatcherTimer
+                    if (double.TryParse(_param2TextBox.Text, out double param))
                     {
-                        Interval = TimeSpan.FromMilliseconds(500)
-                    };
-                    _param2UpdateTimer.Tick += (s, args) =>
-                    {
-                        _param2UpdateTimer.Stop();
-                        if (double.TryParse(_param2TextBox.Text, out double param))
-                        {
-                            Log($"Parameter 2 set to {param}");
-                        }
-                    };
-                }
-                timer = _param2UpdateTimer;
-            }
-
-            if (timer != null)
-            {
-                timer.Stop();
-                timer.Start();
+                        Log($"Parameter 2 set to {param}");
+                    }
+                });
             }
         }
 
@@ -204,12 +178,6 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
 
         #region Core Functionality
 
-        // Check if the device is connected
-        private bool IsDeviceConnected()
-        {
-            return _device != null && _device.IsConnected;
-        }
-
         // Initialize the arbitrary waveform controls
         private void InitializeArbitraryWaveformControls()
         {
@@ -220,7 +188,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     _categoryComboBox.Items.Clear();
 
                 // Get all categories from the RigolDG2072 instance
-                var categories = _device.GetArbitraryWaveformCategories();
+                var categories = Device.GetArbitraryWaveformCategories();
 
                 // Add each category to the ComboBox
                 foreach (var category in categories)
@@ -261,12 +229,12 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                                   out RigolDG2072.ArbitraryWaveformCategory selectedCategory))
                 {
                     // Get waveforms for the selected category
-                    var waveforms = _device.GetArbitraryWaveformNames(selectedCategory);
+                    var waveforms = Device.GetArbitraryWaveformNames(selectedCategory);
 
                     // Add each waveform to the ComboBox with a descriptive name
                     foreach (var waveform in waveforms)
                     {
-                        string descriptiveName = _device.GetArbitraryWaveformDescription(waveform);
+                        string descriptiveName = Device.GetArbitraryWaveformDescription(waveform);
 
                         // Create a ComboBoxItem with the descriptive name as Content
                         // and the original code as Tag for reference when sending to device
@@ -295,17 +263,15 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         {
             try
             {
-                // Reset parameters to defaults (existing code)
+                // Reset parameters to defaults
                 if (_param1TextBox != null) _param1TextBox.Text = "1.0";
                 if (_param2TextBox != null) _param2TextBox.Text = "1.0";
 
                 // Update the waveform info text
                 if (_waveformInfoTextBlock != null)
                 {
-                    // Get comprehensive description from the device
-                    //string fullDescription = _device.GetArbitraryWaveformInfo(waveformName);
+                    // Get comprehensive description
                     string fullDescription = ArbitraryWaveformDescriptions.GetDetailedDescription(waveformName);
-
 
                     // Split description at "Applications:" if present
                     int appIndex = fullDescription.IndexOf("Applications:");
@@ -346,7 +312,6 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
         }
 
         // Apply the arbitrary waveform to the device
-        // Apply the arbitrary waveform to the device
         private void ApplyArbitraryWaveform()
         {
             try
@@ -362,13 +327,13 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     // Extract the original waveform code from the ComboBoxItem
                     string selectedArbWaveform;
 
-                    // Check if the selected item is a ComboBoxItem (which it should be after our changes)
+                    // Check if the selected item is a ComboBoxItem
                     if (_waveformComboBox.SelectedItem is ComboBoxItem comboBoxItem)
                     {
                         // Get the original code from Tag
                         selectedArbWaveform = comboBoxItem.Tag?.ToString();
 
-                        // If Tag is null, fall back to Content (though this shouldn't happen)
+                        // If Tag is null, fall back to Content
                         if (string.IsNullOrEmpty(selectedArbWaveform))
                         {
                             selectedArbWaveform = comboBoxItem.Content.ToString();
@@ -376,11 +341,11 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     }
                     else
                     {
-                        // Fall back to the old behavior if somehow it's not a ComboBoxItem
+                        // Fall back to the original behavior
                         selectedArbWaveform = _waveformComboBox.SelectedItem.ToString();
                     }
 
-                    // Get current parameters from UI
+                    // Get current parameters from UI using base class methods
                     double frequency = GetFrequencyFromUI();
                     double amplitude = GetAmplitudeFromUI();
                     double offset = GetOffsetFromUI();
@@ -405,26 +370,25 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     }
 
                     // Apply the arbitrary waveform
-                    _device.SetArbitraryWaveform(_activeChannel, selectedCategory, selectedArbWaveform);
+                    Device.SetArbitraryWaveform(ActiveChannel, selectedCategory, selectedArbWaveform);
 
                     // Apply basic parameters
-                    _device.SetFrequency(_activeChannel, frequency);
-                    _device.SetAmplitude(_activeChannel, amplitude);
-                    _device.SetOffset(_activeChannel, offset);
-                    _device.SetPhase(_activeChannel, phase);
+                    Device.SetFrequency(ActiveChannel, frequency);
+                    Device.SetAmplitude(ActiveChannel, amplitude);
+                    Device.SetOffset(ActiveChannel, offset);
+                    Device.SetPhase(ActiveChannel, phase);
 
                     // Apply additional parameters if available
                     if (additionalParams.Count > 0)
                     {
-                        // The device specific API would need to handle these
+                        // Log the additional parameters
                         foreach (var param in additionalParams)
                         {
                             Log($"Parameter {param.Key}: {param.Value}");
                         }
                     }
 
-                    // Log the operation
-                    Log($"Applied {selectedArbWaveform} arbitrary waveform from {selectedCategory} category to Channel {_activeChannel}");
+                    Log($"Applied {selectedArbWaveform} arbitrary waveform from {selectedCategory} category to Channel {ActiveChannel}");
                 }
             }
             catch (Exception ex)
@@ -433,89 +397,23 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
             }
         }
 
-        // Helper methods to get values from MainWindow UI
-        private double GetFrequencyFromUI()
-        {
-            TextBox freqTextBox = FindControl("ChannelFrequencyTextBox") as TextBox;
-            ComboBox unitComboBox = FindControl("ChannelFrequencyUnitComboBox") as ComboBox;
-
-            if (freqTextBox != null && unitComboBox != null &&
-                double.TryParse(freqTextBox.Text, out double frequency))
-            {
-                string freqUnit = UnitConversionUtility.GetFrequencyUnit(unitComboBox);
-                double freqMultiplier = UnitConversionUtility.GetFrequencyMultiplier(freqUnit);
-                return frequency * freqMultiplier;
-            }
-
-            return 1000.0; // Default 1kHz
-        }
-
-        private double GetAmplitudeFromUI()
-        {
-            TextBox ampTextBox = FindControl("ChannelAmplitudeTextBox") as TextBox;
-            ComboBox unitComboBox = FindControl("ChannelAmplitudeUnitComboBox") as ComboBox;
-
-            if (ampTextBox != null && unitComboBox != null &&
-                double.TryParse(ampTextBox.Text, out double amplitude))
-            {
-                string ampUnit = UnitConversionUtility.GetAmplitudeUnit(unitComboBox);
-                double ampMultiplier = UnitConversionUtility.GetAmplitudeMultiplier(ampUnit);
-                return amplitude * ampMultiplier;
-            }
-
-            return 1.0; // Default 1Vpp
-        }
-
-        private double GetOffsetFromUI()
-        {
-            TextBox offsetTextBox = FindControl("ChannelOffsetTextBox") as TextBox;
-
-            if (offsetTextBox != null && double.TryParse(offsetTextBox.Text, out double offset))
-            {
-                return offset;
-            }
-
-            return 0.0; // Default 0V
-        }
-
-        private double GetPhaseFromUI()
-        {
-            TextBox phaseTextBox = FindControl("ChannelPhaseTextBox") as TextBox;
-
-            if (phaseTextBox != null && double.TryParse(phaseTextBox.Text, out double phase))
-            {
-                return phase;
-            }
-
-            return 0.0; // Default 0°
-        }
-
-        private object FindControl(string controlName)
-        {
-            if (_categoryComboBox != null)
-            {
-                Window mainWindow = Window.GetWindow(_categoryComboBox);
-                return mainWindow?.FindName(controlName);
-            }
-            return null;
-        }
-
         #endregion
 
         #region Public Methods
 
-        // Refresh the arbitrary waveform settings from the device
-        // Also fix the RefreshArbitraryWaveformSettings method
+        /// <summary>
+        /// Refresh the arbitrary waveform settings from the device
+        /// </summary>
         public void RefreshArbitraryWaveformSettings()
         {
             try
             {
                 // Get current arbitrary waveform type
-                string waveformType = _device.GetArbitraryWaveformType(_activeChannel);
+                string waveformType = Device.GetArbitraryWaveformType(ActiveChannel);
 
                 // Try to get the friendly name and category
-                string deviceWaveformName = _device.GetCurrentArbitraryWaveformName(_activeChannel);
-                var category = _device.GetCurrentArbitraryWaveformCategory(_activeChannel);
+                string deviceWaveformName = Device.GetCurrentArbitraryWaveformName(ActiveChannel);
+                var category = Device.GetCurrentArbitraryWaveformCategory(ActiveChannel);
 
                 // Select the correct category in the combo box if found
                 if (category.HasValue && _categoryComboBox != null)
@@ -565,7 +463,7 @@ namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
                     UpdateArbitraryWaveformParameters(selectedWaveform);
                 }
 
-                Log($"Refreshed arbitrary waveform settings for Channel {_activeChannel}");
+                Log($"Refreshed arbitrary waveform settings for Channel {ActiveChannel}");
             }
             catch (Exception ex)
             {
