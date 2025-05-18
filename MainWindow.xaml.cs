@@ -208,6 +208,7 @@ namespace DG2072_USB_Control
                     // Update output state
                     UpdateOutputState(ChannelOutputToggle, activeChannel);
                 }
+ 
                 // Special handling for PULSE waveform - delegate to pulseGenerator
                 else if (waveform == "PULSE" && pulseGenerator != null)
                 {
@@ -233,9 +234,11 @@ namespace DG2072_USB_Control
                     // Ensure pulse-specific controls are visible
                     pulseGenerator.UpdatePulseControls(true);
                 }
+
+                // Handle other non-DC waveforms
                 else
                 {
-                    // Handle other non-DC waveforms
+
 
                     // Update frequency/period based on current mode
                     if (_frequencyModeActive)
@@ -253,11 +256,13 @@ namespace DG2072_USB_Control
                     UpdatePhaseValue(ChannelPhaseTextBox, activeChannel);
                     UpdateOutputState(ChannelOutputToggle, activeChannel);
 
-                    // Update waveform-specific parameters
+                    // Add handling for RAMP waveform
                     if (waveform == "RAMP" && rampGenerator != null)
                     {
-                        rampGenerator.UpdateSymmetryValue();
+                        // Delegate to the ramp generator
+                        rampGenerator.ApplyParameters();
                     }
+
                     else if (waveform == "SQUARE" && squareGenerator != null)
                     {
                         squareGenerator.UpdateDutyCycleValue();
@@ -265,6 +270,14 @@ namespace DG2072_USB_Control
                     else if (waveform == "HARMONIC" && _harmonicsUIController != null)
                     {
                         _harmonicsUIController.RefreshHarmonicSettings();
+                    }
+                    else if (waveform == "NOISE" && noiseGenerator != null)
+                    {
+                        // Delegate to the noise generator for handling NOISE-specific settings
+                        noiseGenerator.RefreshParameters();
+
+                        // Update output state
+                        UpdateOutputState(ChannelOutputToggle, activeChannel);
                     }
                     else if (waveform == "DUAL TONE")
                     {

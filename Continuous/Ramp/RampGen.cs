@@ -6,7 +6,7 @@ using DG2072_USB_Control.Services;
 
 namespace DG2072_USB_Control.Continuous.Ramp
 {
-    public class RampGen : WaveformGenerator
+    public class RampGen : WaveformGenerator, IRampEventHandler
     {
         // UI elements specific to Ramp
         private readonly TextBox _symmetryTextBox;

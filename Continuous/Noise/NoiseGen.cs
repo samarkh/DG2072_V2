@@ -2,8 +2,7 @@
 using DG2072_USB_Control.Continuous.Noise;
 using DG2072_USB_Control.Services;
 using System;
-using System.Windows;           // Add this for Window class
-using DG2072_USB_Control.Services;
+using System.Windows;
 
 public class NoiseGen : WaveformGenerator, INoiseEventHandler
 {
