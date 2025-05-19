@@ -184,15 +184,619 @@
                                 <!-- All existing waveform-specific sections like HarmonicsGroupBox, DualToneGroupBox, etc. -->
                                 
                                 <!-- Include all existing waveform-specific GroupBoxes here -->
-                                <!-- Harmonics Section -->
+                                <!-- 2. HARMONICS CONTROLS IMPLEMENTATION -->
+                                <!-- Add this content inside the HarmonicsGroupBox in the ContinuousModeGrid section -->
                                 <GroupBox x:Name="HarmonicsGroupBox" Header="Harmonics Controls" Visibility="Collapsed" Margin="0,10,0,0">
-                                    <!-- Harmonics content here - keep the existing content unchanged -->
+                                    <StackPanel>
+                                        <!-- Harmonics Master Toggle -->
+                                        <DockPanel Margin="0,5">
+                                            <Label Content="Harmonics:" Width="100" ToolTip="Turn harmonics function on or off"/>
+                                            <ToggleButton x:Name="HarmonicsToggle" Content="Disabled" Width="80" Click="HarmonicsToggle_Click" 
+                          ToolTip="Toggle harmonics function on/off" HorizontalAlignment="Left"/>
+                                        </DockPanel>
+
+                                        <!-- Harmonic Amplitude Mode Selection -->
+                                        <DockPanel Margin="0,5">
+                                            <Label Content="Amplitude Mode:" Width="120"/>
+                                            <RadioButton x:Name="AmplitudePercentageMode" Content="Percentage" Margin="0,0,10,0" 
+                         IsChecked="True" GroupName="AmplitudeMode" Checked="AmplitudeModeChanged"
+                         ToolTip="Display harmonic amplitudes as percentage of fundamental amplitude"/>
+                                            <RadioButton x:Name="AmplitudeAbsoluteMode" Content="Absolute" GroupName="AmplitudeMode" 
+                         Checked="AmplitudeModeChanged" 
+                         ToolTip="Display harmonic amplitudes in absolute voltage (V)"/>
+                                        </DockPanel>
+
+                                        <!-- Headers for the harmonic parameters -->
+                                        <Grid Margin="0,10,0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Harmonic" Grid.Column="0" FontWeight="Bold"/>
+                                            <TextBlock Text="Enable" Grid.Column="1" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock x:Name="AmplitudeHeader" Text="Amplitude (%)" Grid.Column="2" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Phase (°)" Grid.Column="3" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Harmonic 2 -->
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="2nd Harmonic" Grid.Column="0"/>
+                                            <CheckBox x:Name="Harmonic2CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="2"
+                      ToolTip="Enable/disable 2nd harmonic"/>
+                                            <TextBox x:Name="Harmonic2AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="2"
+                     ToolTip="Set amplitude for 2nd harmonic"/>
+                                            <!-- New: Amplitude unit combo box, only visible in Absolute mode -->
+                                            <ComboBox x:Name="Harmonic2AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+                      SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+                      Tag="2" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic2PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="2"
+                     ToolTip="Set phase for 2nd harmonic (0-360°)"/>
+                                        </Grid>
+
+                                        <!-- Harmonic 3 -->
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="3rd Harmonic" Grid.Column="0"/>
+                                            <CheckBox x:Name="Harmonic3CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="3"
+                      ToolTip="Enable/disable 3rd harmonic"/>
+                                            <TextBox x:Name="Harmonic3AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="3"
+                     ToolTip="Set amplitude for 3rd harmonic"/>
+                                            <ComboBox x:Name="Harmonic3AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+                      SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+                      Tag="3" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic3PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="3"
+                     ToolTip="Set phase for 3rd harmonic (0-360°)"/>
+                                        </Grid>
+
+                                        <!-- Harmonics 4-8 (adding 4-8 with same pattern) -->
+                                        <!-- Harmonic 4 -->
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="4th Harmonic" Grid.Column="0"/>
+                                            <CheckBox x:Name="Harmonic4CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="4"
+                      ToolTip="Enable/disable 4th harmonic"/>
+                                            <TextBox x:Name="Harmonic4AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="4"
+                     ToolTip="Set amplitude for 4th harmonic"/>
+                                            <ComboBox x:Name="Harmonic4AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+                      SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+                      Tag="4" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic4PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="4"
+                     ToolTip="Set phase for 4th harmonic (0-360°)"/>
+                                        </Grid>
+
+                                        <!-- Harmonic 5 -->
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="5th Harmonic" Grid.Column="0"/>
+                                            <CheckBox x:Name="Harmonic5CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="5"
+                      ToolTip="Enable/disable 5th harmonic"/>
+                                            <TextBox x:Name="Harmonic5AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="5"
+                     ToolTip="Set amplitude for 5th harmonic"/>
+                                            <ComboBox x:Name="Harmonic5AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+                      SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+                      Tag="5" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic5PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="5"
+                     ToolTip="Set phase for 5th harmonic (0-360°)"/>
+                                        </Grid>
+
+                                        <!-- Harmonics 6-8 (similar pattern) -->
+                                        <!-- Harmonic 6 -->
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="6th Harmonic" Grid.Column="0"/>
+                                            <CheckBox x:Name="Harmonic6CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="6"
+                      ToolTip="Enable/disable 6th harmonic"/>
+                                            <TextBox x:Name="Harmonic6AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="6"
+                     ToolTip="Set amplitude for 6th harmonic"/>
+                                            <ComboBox x:Name="Harmonic6AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+                      SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+                      Tag="6" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic6PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="6"
+                     ToolTip="Set phase for 6th harmonic (0-360°)"/>
+                                        </Grid>
+
+                                        <!-- Harmonics 7-8 (similar pattern) -->
+                                        <!-- Harmonic 7 -->
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="7th Harmonic" Grid.Column="0"/>
+                                            <CheckBox x:Name="Harmonic7CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="7"
+                      ToolTip="Enable/disable 7th harmonic"/>
+                                            <TextBox x:Name="Harmonic7AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="7"
+                     ToolTip="Set amplitude for 7th harmonic"/>
+                                            <ComboBox x:Name="Harmonic7AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+                      SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+                      Tag="7" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic7PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="7"
+                     ToolTip="Set phase for 7th harmonic (0-360°)"/>
+                                        </Grid>
+
+                                        <!-- Harmonic 8 -->
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="8th Harmonic" Grid.Column="0"/>
+                                            <CheckBox x:Name="Harmonic8CheckBox" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                      Checked="HarmonicCheckBox_Changed" Unchecked="HarmonicCheckBox_Changed" Tag="8"
+                      ToolTip="Enable/disable 8th harmonic"/>
+                                            <TextBox x:Name="Harmonic8AmplitudeTextBox" Grid.Column="2" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicAmplitudeTextBox_LostFocus" Tag="8"
+                     ToolTip="Set amplitude for 8th harmonic"/>
+                                            <ComboBox x:Name="Harmonic8AmplitudeUnitComboBox" Grid.Column="3" Margin="5,0"
+                      SelectionChanged="HarmonicAmplitudeUnitComboBox_SelectionChanged" 
+                      Tag="8" Visibility="{Binding ElementName=AmplitudeAbsoluteMode, Path=IsChecked, Converter={StaticResource BoolToVisConverter}}">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                                <ComboBoxItem Content="µV"/>
+                                            </ComboBox>
+                                            <TextBox x:Name="Harmonic8PhaseTextBox" Grid.Column="4" Text="0.0" Margin="5,0" 
+                     LostFocus="HarmonicPhaseTextBox_LostFocus" Tag="8"
+                     ToolTip="Set phase for 8th harmonic (0-360°)"/>
+                                        </Grid>
+
+                                        <!-- Help text -->
+                                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0" Foreground="#FF505050" FontStyle="Italic">
+            Select harmonics by checking boxes, set amplitude as Percent of fundemtal or Absolute voltage. Changes are applied automatically.
+                                        </TextBlock>
+                                    </StackPanel>
                                 </GroupBox>
 
                                 <!-- Pulse Section -->
+                                <!-- 1. PULSE CONTROLS IMPLEMENTATION -->
+                                <!-- Add this content inside the PulseGroupBox in the ContinuousModeGrid section -->
                                 <GroupBox x:Name="PulseGroupBox" Header="Pulse Controls" Visibility="Collapsed" Margin="0,10,0,0">
-                                    <!-- Pulse controls content here -->
+                                    <StackPanel>
+                                        <!-- Pulse Width -->
+                                        <DockPanel x:Name="PulseWidthDockPanel" Margin="0,5">
+                                            <Label Content="Width:" Width="100"/>
+                                            <TextBox x:Name="PulseWidth" Width="100" 
+                     TextChanged="ChannelPulseWidthTextBox_TextChanged" 
+                     LostFocus="ChannelPulseWidthTextBox_LostFocus" 
+                     Text="0.5" 
+                     VerticalContentAlignment="Center" 
+                     HorizontalContentAlignment="Right"/>
+                                            <ComboBox x:Name="PulseWidthUnitComboBox" Width="70" Margin="5,0,0,0" 
+                      SelectionChanged="PulseWidthUnitComboBox_SelectionChanged" 
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="s"/>
+                                                <ComboBoxItem Content="ms"/>
+                                                <ComboBoxItem Content="µs" IsSelected="True"/>
+                                                <ComboBoxItem Content="ns"/>
+                                                <ComboBoxItem Content="ps"/>
+                                            </ComboBox>
+                                        </DockPanel>
+
+                                        <!-- Pulse Rise Time with ComboBox -->
+                                        <DockPanel x:Name="PulseRiseTimeDockPanel" Margin="0,5">
+                                            <Label Content="Rise Time:" Width="100"/>
+                                            <TextBox x:Name="PulseRiseTime" Width="100" 
+                     TextChanged="ChannelPulseRiseTimeTextBox_TextChanged" 
+                     LostFocus="ChannelPulseRiseTimeTextBox_LostFocus" 
+                     Text="20" 
+                     VerticalContentAlignment="Center" 
+                     HorizontalContentAlignment="Right"/>
+                                            <ComboBox x:Name="PulseRiseTimeUnitComboBox" Width="70" Margin="5,0,0,0" 
+                      SelectionChanged="PulseRiseTimeUnitComboBox_SelectionChanged" 
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="s"/>
+                                                <ComboBoxItem Content="ms"/>
+                                                <ComboBoxItem Content="µs"/>
+                                                <ComboBoxItem Content="ns" IsSelected="True"/>
+                                                <ComboBoxItem Content="ps"/>
+                                            </ComboBox>
+                                        </DockPanel>
+
+                                        <!-- Pulse Fall Time with ComboBox -->
+                                        <DockPanel x:Name="PulseFallTimeDockPanel" Margin="0,5">
+                                            <Label Content="Fall Time:" Width="100"/>
+                                            <TextBox x:Name="PulseFallTime" Width="100" 
+                     TextChanged="ChannelPulseFallTimeTextBox_TextChanged" 
+                     LostFocus="ChannelPulseFallTimeTextBox_LostFocus" 
+                     Text="20" 
+                     VerticalContentAlignment="Center" 
+                     HorizontalContentAlignment="Right"/>
+                                            <ComboBox x:Name="PulseFallTimeUnitComboBox" Width="70" Margin="5,0,0,0" 
+                      SelectionChanged="PulseFallTimeUnitComboBox_SelectionChanged" 
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="s"/>
+                                                <ComboBoxItem Content="ms"/>
+                                                <ComboBoxItem Content="µs"/>
+                                                <ComboBoxItem Content="ns" IsSelected="True"/>
+                                                <ComboBoxItem Content="ps"/>
+                                            </ComboBox>
+                                        </DockPanel>
+                                    </StackPanel>
                                 </GroupBox>
+                                <!-- 3. DUAL TONE CONTROLS IMPLEMENTATION -->
+                                <!-- Add this to the ContinuousModeGrid after HarmonicsGroupBox -->
+                                <GroupBox x:Name="DualToneGroupBox" Header="Dual Tone Controls" Visibility="Collapsed" Margin="0,10,0,0" 
+         ToolTip="Configure a waveform with two simultaneous frequencies">
+                                    <StackPanel>
+                                        <!-- Control Mode Selection -->
+                                        <DockPanel Margin="0,5">
+                                            <Label Content="Control Mode:" Width="120" 
+               ToolTip="Choose how to specify the dual tone frequencies"/>
+                                            <RadioButton x:Name="DirectFrequencyMode" Content="Direct Frequencies" Margin="0,0,10,0" 
+                 IsChecked="True" GroupName="DualToneMode" Checked="DualToneModeChanged"
+                 ToolTip="Directly specify each frequency (F1 and F2) independently"/>
+                                            <RadioButton x:Name="CenterOffsetMode" Content="Center/Offset" Margin="0,0,10,0" 
+                 GroupName="DualToneMode" Checked="DualToneModeChanged"
+                 ToolTip="Specify the center frequency and the spacing between frequencies"/>
+                                        </DockPanel>
+
+                                        <!-- Direct Frequency Mode Panel -->
+                                        <StackPanel x:Name="DirectFrequencyPanel" Visibility="Visible">
+                                            <!-- Primary Frequency -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Primary Freq:" Width="120" 
+                   ToolTip="First frequency component (F1) of the dual tone signal"/>
+                                                <TextBox x:Name="PrimaryFrequencyTextBox" Width="100" 
+                     TextChanged="PrimaryFrequencyTextBox_TextChanged" 
+                     Text="1000" 
+                     HorizontalContentAlignment="Right" 
+                     VerticalContentAlignment="Center"
+                     ToolTip="Enter the primary frequency (F1) value"/>
+                                                <ComboBox x:Name="PrimaryFrequencyUnitComboBox" Width="70" 
+                      Margin="5,0,0,0" 
+                      HorizontalAlignment="Left"
+                      SelectionChanged="PrimaryFrequencyUnitComboBox_SelectionChanged"
+                      ToolTip="Select the unit for the primary frequency">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- Secondary Frequency with Auto-Sync Option -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Secondary Freq:" Width="120" 
+                      ToolTip="Second frequency component (F2) of the dual tone signal"/>
+                                                <CheckBox x:Name="SynchronizeFrequenciesCheckBox" Content="Auto-sync" Margin="0,0,10,0" 
+                      IsChecked="True" Checked="SynchronizeFrequenciesCheckBox_CheckedChanged" 
+                      Unchecked="SynchronizeFrequenciesCheckBox_CheckedChanged"
+                      ToolTip="When checked, F2 will automatically be calculated as a ratio of F1"/>
+                                                <ComboBox x:Name="FrequencyRatioComboBox" Width="70" 
+                      SelectionChanged="FrequencyRatioComboBox_SelectionChanged" 
+                      ToolTip="Ratio used to calculate F2 from F1 (F2 = F1 × Ratio)"
+                      IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}">
+                                                    <ComboBoxItem Content="1.5" ToolTip="F2 will be 1.5 times F1"/>
+                                                    <ComboBoxItem Content="2.0" IsSelected="True" ToolTip="F2 will be 2 times F1 (one octave higher)"/>
+                                                    <ComboBoxItem Content="3.0" ToolTip="F2 will be 3 times F1"/>
+                                                    <ComboBoxItem Content="4.0" ToolTip="F2 will be 4 times F1 (two octaves higher)"/>
+                                                    <ComboBoxItem Content="5.0" ToolTip="F2 will be 5 times F1"/>
+                                                </ComboBox>
+                                                <TextBlock Text="× Primary" Margin="5,0,0,0" VerticalAlignment="Center"
+                   IsEnabled="{Binding ElementName=SynchronizeFrequenciesCheckBox, Path=IsChecked}"
+                   ToolTip="Secondary frequency = Primary frequency × Ratio"/>
+                                            </DockPanel>
+
+                                            <!-- Secondary Frequency Manual Control -->
+                                            <DockPanel x:Name="SecondaryFrequencyDockPanel" Margin="0,5" IsEnabled="False">
+                                                <Label Content="" Width="120"/>
+                                                <TextBox x:Name="SecondaryFrequencyTextBox" Width="100" 
+                     TextChanged="SecondaryFrequencyTextBox_TextChanged" 
+                     Text="2000" 
+                     HorizontalContentAlignment="Right" 
+                     VerticalContentAlignment="Center"
+                     ToolTip="Enter the secondary frequency (F2) value - only editable when Auto-sync is unchecked"/>
+                                                <ComboBox x:Name="SecondaryFrequencyUnitComboBox" Width="70" 
+                      Margin="5,0,0,0" 
+                      HorizontalAlignment="Left"
+                      SelectionChanged="SecondaryFrequencyUnitComboBox_SelectionChanged"
+                      ToolTip="Select the unit for the secondary frequency">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
+                                                </ComboBox>
+                                            </DockPanel>
+                                        </StackPanel>
+
+                                        <!-- Center/Offset Mode Panel -->
+                                        <StackPanel x:Name="CenterOffsetPanel" Visibility="Collapsed">
+                                            <!-- Center Frequency Control -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Center Freq:" Width="120" 
+                        ToolTip="The midpoint between the two frequencies"/>
+                                                <TextBox x:Name="CenterFrequencyTextBox" Width="100" 
+                     TextChanged="CenterFrequencyTextBox_TextChanged" 
+                     Text="1500" 
+                     HorizontalContentAlignment="Right" 
+                     VerticalContentAlignment="Center"
+                     ToolTip="Enter the center frequency - the midpoint between the two tones"/>
+                                                <ComboBox x:Name="CenterFrequencyUnitComboBox" Width="70" 
+                          Margin="5,0,0,0" 
+                          HorizontalAlignment="Left"
+                          SelectionChanged="CenterFrequencyUnitComboBox_SelectionChanged"
+                          ToolTip="Select the unit for the center frequency">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- Offset Frequency Control -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Offset Freq:" Width="120" 
+                        ToolTip="Distance from center to each tone (F1 = Center - Offset, F2 = Center + Offset)"/>
+                                                <TextBox x:Name="OffsetFrequencyTextBox" Width="100" 
+                         TextChanged="OffsetFrequencyTextBox_TextChanged" 
+                         Text="500" 
+                         HorizontalContentAlignment="Right" 
+                         VerticalContentAlignment="Center"
+                         ToolTip="Enter the frequency offset - how far each tone is from the center frequency"/>
+                                                <ComboBox x:Name="OffsetFrequencyUnitComboBox" Width="70" 
+                Margin="5,0,0,0" 
+                HorizontalAlignment="Left"
+                SelectionChanged="OffsetFrequencyUnitComboBox_SelectionChanged"
+                    ToolTip="Select the unit for the frequency offset">
+                                                    <ComboBoxItem Content="µHz" ToolTip="Microhertz (10^-6 Hz)"/>
+                                                    <ComboBoxItem Content="mHz" ToolTip="Millihertz (10^-3 Hz)"/>
+                                                    <ComboBoxItem Content="Hz" IsSelected="True" ToolTip="Hertz (cycles per second)"/>
+                                                    <ComboBoxItem Content="kHz" ToolTip="Kilohertz (10^3 Hz)"/>
+                                                    <ComboBoxItem Content="MHz" ToolTip="Megahertz (10^6 Hz)"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- Calculated Frequencies Display -->
+                                            <Grid Margin="0,5">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <Label Content="Calculated F1:" Grid.Row="0" Grid.Column="0" 
+                       ToolTip="First frequency component, calculated as: Center - Offset"/>
+                                                <TextBlock x:Name="CalculatedF1Display" Text="1000 Hz" Grid.Row="0" Grid.Column="1" 
+                       VerticalAlignment="Center" Foreground="#FF505050"
+                       ToolTip="The resulting F1 frequency based on center and offset values"/>
+                                                <Label Content="Calculated F2:" Grid.Row="1" Grid.Column="0" 
+                       ToolTip="Second frequency component, calculated as: Center + Offset"/>
+                                                <TextBlock x:Name="CalculatedF2Display" Text="2000 Hz" Grid.Row="1" Grid.Column="1" 
+                       VerticalAlignment="Center" Foreground="#FF505050"
+                       ToolTip="The resulting F2 frequency based on center and offset values"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- Information Text -->
+                                        <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontStyle="Italic" Foreground="#FF505050"
+           ToolTip="Explanation of the relationship between frequencies in dual tone mode">
+                Dual tone generates two frequencies simultaneously. You can control them directly or by center/offset.
+                In Center/Offset mode: F1 = Center - Offset, F2 = Center + Offset. Changes are applied automatically.
+                                        </TextBlock>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- 4. ARBITRARY WAVEFORM CONTROLS IMPLEMENTATION -->
+                                <!-- Add this to the ContinuousModeGrid after DualToneGroupBox -->
+                                <GroupBox x:Name="ArbitraryWaveformGroupBox" Header="Arbitrary Waveform Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                    <StackPanel>
+                                        <!-- Arbitrary Waveform Selection -->
+                                        <DockPanel Margin="0,5">
+                                            <Label Content="Category:" Width="120" ToolTip="Select arbitrary waveform category"/>
+                                            <ComboBox x:Name="ArbitraryWaveformCategoryComboBox" Width="200" 
+                      SelectionChanged="ArbitraryWaveformCategoryComboBox_SelectionChanged"
+                      HorizontalAlignment="Left"/>
+                                        </DockPanel>
+
+                                        <DockPanel Margin="0,5">
+                                            <Label Content="Waveform:" Width="120" ToolTip="Select predefined arbitrary waveform"/>
+                                            <ComboBox x:Name="ArbitraryWaveformComboBox" Width="200" 
+                      SelectionChanged="ArbitraryWaveformComboBox_SelectionChanged"
+                      HorizontalAlignment="Left"/>
+                                        </DockPanel>
+
+                                        <!-- Arbitrary Waveform Parameters -->
+                                        <GroupBox Name="WaveformParametersGroup" Header="Waveform Parameters" Margin="0,5" Visibility="Collapsed">
+                                            <StackPanel>
+                                                <!-- These parameters will be dynamically shown/hidden based on the selected waveform -->
+                                                <DockPanel x:Name="ArbitraryParam1DockPanel" Margin="0,5">
+                                                    <Label Content="Parameter 1:" Width="120"/>
+                                                    <TextBox x:Name="ArbitraryParam1TextBox" Width="100" 
+                             Text="1.0" 
+                             TextChanged="ArbitraryParamTextBox_TextChanged"
+                             LostFocus="ArbitraryParamTextBox_LostFocus"
+                             Tag="1"
+                             HorizontalContentAlignment="Right" 
+                             VerticalContentAlignment="Center"/>
+                                                    <TextBlock x:Name="ArbitraryParam1UnitTextBlock" Text="Units" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                                </DockPanel>
+
+                                                <DockPanel x:Name="ArbitraryParam2DockPanel" Margin="0,5">
+                                                    <Label Content="Parameter 2:" Width="120"/>
+                                                    <TextBox x:Name="ArbitraryParam2TextBox" Width="100" 
+                                Text="1.0" 
+                                TextChanged="ArbitraryParamTextBox_TextChanged"
+                                LostFocus="ArbitraryParamTextBox_LostFocus"
+                                Tag="2"
+                                HorizontalContentAlignment="Right" 
+                                VerticalContentAlignment="Center"/>
+                                                    <TextBlock x:Name="ArbitraryParam2UnitTextBlock" Text="Units" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </GroupBox>
+
+                                        <!-- Waveform Information -->
+                                        <GroupBox Header="Waveform Information" Margin="0,10,0,0">
+                                            <StackPanel>
+                                                <!-- Main description text -->
+                                                <TextBlock x:Name="ArbitraryWaveformInfoTextBlock" 
+                   TextWrapping="Wrap" 
+                   Margin="0,10,0,0" 
+                   Foreground="#FF505050"/>
+
+                                                <!-- Applications section with a separator -->
+                                                <Separator Margin="0,10,0,5"/>
+
+                                                <!-- Applications content (with the label from description) -->
+                                                <TextBlock x:Name="WaveformApplicationsTextBlock" 
+                   TextWrapping="Wrap" 
+                   Margin="0,5,0,0"
+                   Foreground="#FF505050"/>
+                                            </StackPanel>
+                                        </GroupBox>
+
+                                        <!-- Apply Button for Arbitrary Waveform -->
+                                        <Button x:Name="ApplyArbitraryWaveformButton" 
+        Content="Apply Arbitrary Waveform" 
+        Click="ApplyArbitraryWaveformButton_Click" 
+        Margin="0,10,0,5" 
+        Background="#FFE6F0FF"
+        Height="30"
+        Width="200"
+        HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- 5. DC CONTROLS IMPLEMENTATION -->
+                                <!-- Add this to the ContinuousModeGrid after ArbitraryWaveformGroupBox -->
+                                <GroupBox x:Name="DCGroupBox" Header="DC Voltage Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                    <StackPanel>
+                                        <!-- DC Voltage Control -->
+                                        <DockPanel Margin="0,5">
+                                            <Label Content="DC Voltage:" Width="120" ToolTip="Set the DC voltage level"/>
+                                            <TextBox x:Name="DCVoltageTextBox" Width="100" 
+                    TextChanged="DCVoltageTextBox_TextChanged" 
+                    LostFocus="DCVoltageTextBox_LostFocus"
+                    Text="0.0" 
+                    HorizontalContentAlignment="Right" 
+                    VerticalContentAlignment="Center"/>
+                                            <ComboBox x:Name="DCVoltageUnitComboBox" Width="70" 
+                      Margin="5,0,0,0" 
+                      SelectionChanged="DCVoltageUnitComboBox_SelectionChanged" 
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="V" IsSelected="True"/>
+                                                <ComboBoxItem Content="mV"/>
+                                            </ComboBox>
+                                        </DockPanel>
+
+                                        <!-- Impedance Control -->
+                                        <DockPanel Margin="0,5">
+                                            <Label Content="Load Impedance:" Width="120" ToolTip="Set the output load impedance"/>
+                                            <ComboBox x:Name="DCImpedanceComboBox" Width="100" 
+                      SelectionChanged="DCImpedanceComboBox_SelectionChanged"
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="High-Z"/>
+                                                <ComboBoxItem Content="50Ω" IsSelected="True"/>
+                                                <ComboBoxItem Content="75Ω"/>
+                                                <ComboBoxItem Content="100Ω"/>
+                                                <ComboBoxItem Content="150Ω"/>
+                                                <ComboBoxItem Content="200Ω"/>
+                                                <ComboBoxItem Content="300Ω"/>
+                                                <ComboBoxItem Content="400Ω"/>
+                                                <ComboBoxItem Content="500Ω"/>
+                                                <ComboBoxItem Content="1kΩ"/>
+                                                <ComboBoxItem Content="2kΩ"/>
+                                                <ComboBoxItem Content="4kΩ"/>
+                                                <ComboBoxItem Content="8kΩ"/>
+                                                <ComboBoxItem Content="10kΩ"/>
+                                            </ComboBox>
+                                        </DockPanel>
+
+                                        <!-- Information text -->
+                                        <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontStyle="Italic" Foreground="#FF505050">
+DC waveform outputs a constant voltage. The voltage level displayed depends on the load impedance setting.
+For accurate voltage measurement, set the load impedance to match your actual load.
+                                        </TextBlock>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                
 
                                 <!-- All other existing waveform-specific GroupBoxes -->
                                 <!-- DualToneGroupBox, ArbitraryWaveformGroupBox, DCGroupBox, etc. -->
@@ -356,9 +960,200 @@
                                     </GroupBox>
 
                                     <!-- PM Modulation Panel (Similar structure as AM/FM) -->
+
+                                    <!-- 6. PM MODULATION CONTROLS (placeholder that was missing) -->
+                                    <!-- Add this to the ModulationModeGrid after FMModulationGroupBox -->
                                     <GroupBox x:Name="PMModulationGroupBox" Header="PM Modulation Controls" Visibility="Collapsed" Margin="0,10,0,0">
-                                        <!-- PM Modulation controls here -->
+                                        <StackPanel>
+                                            <!-- PM State Toggle -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="State:" Width="100"/>
+                                                <ToggleButton x:Name="PMStateToggle" Content="OFF" Width="80" Click="PMStateToggle_Click" HorizontalAlignment="Left"/>
+                                            </DockPanel>
+
+                                            <!-- PM Source Selection -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Source:" Width="100"/>
+                                                <ComboBox x:Name="PMSourceComboBox" Width="150" SelectionChanged="PMSourceComboBox_SelectionChanged" HorizontalAlignment="Left">
+                                                    <ComboBoxItem Content="Internal"/>
+                                                    <ComboBoxItem Content="External"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- PM Deviation Control -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Phase Dev:" Width="100"/>
+                                                <TextBox x:Name="PMDeviationTextBox" Width="80" TextChanged="PMDeviationTextBox_TextChanged" 
+                     LostFocus="PMDeviationTextBox_LostFocus" Text="90.0" HorizontalContentAlignment="Right" VerticalContentAlignment="Center"/>
+                                                <TextBlock Text="°" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                            </DockPanel>
+
+                                            <!-- PM Internal Source Settings -->
+                                            <GroupBox x:Name="PMInternalSettingsGroupBox" Header="Internal Modulation Settings" Margin="0,10,0,0">
+                                                <StackPanel>
+                                                    <!-- PM Waveform Selection -->
+                                                    <DockPanel Margin="0,5">
+                                                        <Label Content="Waveform:" Width="100"/>
+                                                        <ComboBox x:Name="PMWaveformComboBox" Width="150" SelectionChanged="PMWaveformComboBox_SelectionChanged" HorizontalAlignment="Left">
+                                                            <ComboBoxItem Content="Sine"/>
+                                                            <ComboBoxItem Content="Square"/>
+                                                            <ComboBoxItem Content="Triangle"/>
+                                                            <ComboBoxItem Content="UpRamp"/>
+                                                            <ComboBoxItem Content="DnRamp"/>
+                                                            <ComboBoxItem Content="Noise"/>
+                                                            <ComboBoxItem Content="Arb"/>
+                                                        </ComboBox>
+                                                    </DockPanel>
+
+                                                    <!-- PM Frequency Control -->
+                                                    <DockPanel Margin="0,5">
+                                                        <Label Content="Mod Frequency:" Width="100"/>
+                                                        <TextBox x:Name="PMFrequencyTextBox" Width="100" TextChanged="PMFrequencyTextBox_TextChanged" 
+                             LostFocus="PMFrequencyTextBox_LostFocus" Text="10" HorizontalContentAlignment="Right" VerticalContentAlignment="Center"/>
+                                                        <ComboBox x:Name="PMFrequencyUnitComboBox" Width="70" Margin="5,0,0,0" SelectionChanged="PMFrequencyUnitComboBox_SelectionChanged" HorizontalAlignment="Left">
+                                                            <ComboBoxItem Content="mHz"/>
+                                                            <ComboBoxItem Content="Hz" IsSelected="True"/>
+                                                            <ComboBoxItem Content="kHz"/>
+                                                        </ComboBox>
+                                                    </DockPanel>
+                                                </StackPanel>
+                                            </GroupBox>
+
+                                            <!-- Info Text and Apply Button -->
+                                            <TextBlock TextWrapping="Wrap" Margin="0,10,0,5" Foreground="#FF505050" FontStyle="Italic">
+            PM modulation varies the phase of the carrier signal based on the modulating signal. 
+            The Phase Deviation controls how far the phase shifts.
+                                            </TextBlock>
+
+                                            <Button x:Name="PMApplyButton" Content="Apply Modulation" Click="PMApplyButton_Click" 
+                Height="24" Width="120" Margin="0,5,0,0" HorizontalAlignment="Left"/>
+                                        </StackPanel>
                                     </GroupBox>
+
+                                    <!-- ASK Modulation Panel -->
+                                    <GroupBox x:Name="ASKModulationGroupBox" Header="ASK Modulation Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                        <StackPanel>
+                                            <!-- ASK State Toggle -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="State:" Width="100"/>
+                                                <ToggleButton x:Name="ASKStateToggle" Content="OFF" Width="80" Click="ASKStateToggle_Click" HorizontalAlignment="Left"/>
+                                            </DockPanel>
+
+                                            <!-- ASK Source Selection -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Source:" Width="100"/>
+                                                <ComboBox x:Name="ASKSourceComboBox" Width="150" SelectionChanged="ASKSourceComboBox_SelectionChanged" HorizontalAlignment="Left">
+                                                    <ComboBoxItem Content="Internal"/>
+                                                    <ComboBoxItem Content="External"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- ASK controls would go here -->
+
+                                            <!-- Info Text and Apply Button -->
+                                            <TextBlock TextWrapping="Wrap" Margin="0,10,0,5" Foreground="#FF505050" FontStyle="Italic">
+            ASK (Amplitude Shift Keying) modulation switches between two amplitude levels 
+            based on the modulating signal.
+                                            </TextBlock>
+
+                                            <Button x:Name="ASKApplyButton" Content="Apply Modulation" Click="ASKApplyButton_Click" 
+                Height="24" Width="120" Margin="0,5,0,0" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <!-- FSK Modulation Panel -->
+                                    <GroupBox x:Name="FSKModulationGroupBox" Header="FSK Modulation Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                        <StackPanel>
+                                            <!-- FSK State Toggle -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="State:" Width="100"/>
+                                                <ToggleButton x:Name="FSKStateToggle" Content="OFF" Width="80" Click="FSKStateToggle_Click" HorizontalAlignment="Left"/>
+                                            </DockPanel>
+
+                                            <!-- FSK Source Selection -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Source:" Width="100"/>
+                                                <ComboBox x:Name="FSKSourceComboBox" Width="150" SelectionChanged="FSKSourceComboBox_SelectionChanged" HorizontalAlignment="Left">
+                                                    <ComboBoxItem Content="Internal"/>
+                                                    <ComboBoxItem Content="External"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- FSK controls would go here -->
+
+                                            <!-- Info Text and Apply Button -->
+                                            <TextBlock TextWrapping="Wrap" Margin="0,10,0,5" Foreground="#FF505050" FontStyle="Italic">
+            FSK (Frequency Shift Keying) modulation switches between two frequency values 
+            based on the modulating signal.
+                                            </TextBlock>
+
+                                            <Button x:Name="FSKApplyButton" Content="Apply Modulation" Click="FSKApplyButton_Click" 
+                Height="24" Width="120" Margin="0,5,0,0" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <!-- PSK Modulation Panel -->
+                                    <GroupBox x:Name="PSKModulationGroupBox" Header="PSK Modulation Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                        <StackPanel>
+                                            <!-- PSK State Toggle -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="State:" Width="100"/>
+                                                <ToggleButton x:Name="PSKStateToggle" Content="OFF" Width="80" Click="PSKStateToggle_Click" HorizontalAlignment="Left"/>
+                                            </DockPanel>
+
+                                            <!-- PSK Source Selection -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Source:" Width="100"/>
+                                                <ComboBox x:Name="PSKSourceComboBox" Width="150" SelectionChanged="PSKSourceComboBox_SelectionChanged" HorizontalAlignment="Left">
+                                                    <ComboBoxItem Content="Internal"/>
+                                                    <ComboBoxItem Content="External"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- PSK controls would go here -->
+
+                                            <!-- Info Text and Apply Button -->
+                                            <TextBlock TextWrapping="Wrap" Margin="0,10,0,5" Foreground="#FF505050" FontStyle="Italic">
+            PSK (Phase Shift Keying) modulation switches between two phase values 
+            based on the modulating signal.
+                                            </TextBlock>
+
+                                            <Button x:Name="PSKApplyButton" Content="Apply Modulation" Click="PSKApplyButton_Click" 
+                Height="24" Width="120" Margin="0,5,0,0" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <!-- PWM Modulation Panel -->
+                                    <GroupBox x:Name="PWMModulationGroupBox" Header="PWM Modulation Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                        <StackPanel>
+                                            <!-- PWM State Toggle -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="State:" Width="100"/>
+                                                <ToggleButton x:Name="PWMStateToggle" Content="OFF" Width="80" Click="PWMStateToggle_Click" HorizontalAlignment="Left"/>
+                                            </DockPanel>
+
+                                            <!-- PWM Source Selection -->
+                                            <DockPanel Margin="0,5">
+                                                <Label Content="Source:" Width="100"/>
+                                                <ComboBox x:Name="PWMSourceComboBox" Width="150" SelectionChanged="PWMSourceComboBox_SelectionChanged" HorizontalAlignment="Left">
+                                                    <ComboBoxItem Content="Internal"/>
+                                                    <ComboBoxItem Content="External"/>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- PWM controls would go here -->
+
+                                            <!-- Info Text and Apply Button -->
+                                            <TextBlock TextWrapping="Wrap" Margin="0,10,0,5" Foreground="#FF505050" FontStyle="Italic">
+            PWM (Pulse Width Modulation) modulation varies the pulse width of a carrier signal
+            based on the modulating signal.
+                                            </TextBlock>
+
+                                            <Button x:Name="PWMApplyButton" Content="Apply Modulation" Click="PWMApplyButton_Click" 
+                Height="24" Width="120" Margin="0,5,0,0" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </GroupBox>
+
 
                                     <!-- Additional modulation types: ASK, FSK, PSK, PWM -->
                                     <!-- Add similar GroupBoxes for each modulation type -->
