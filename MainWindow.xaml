@@ -184,6 +184,77 @@
                                 <!-- All existing waveform-specific sections like HarmonicsGroupBox, DualToneGroupBox, etc. -->
                                 
                                 <!-- Include all existing waveform-specific GroupBoxes here -->
+
+                                <!-- Pulse Section -->
+                                <!-- 1. PULSE CONTROLS IMPLEMENTATION -->
+                                <!-- 1. PULSE CONTROLS IMPLEMENTATION -->
+                                <!-- 1. PULSE CONTROLS IMPLEMENTATION -->
+                                <!-- Add this content inside the PulseGroupBox in the ContinuousModeGrid section -->
+                                <GroupBox x:Name="PulseGroupBox" Header="Pulse Controls" Visibility="Collapsed" Margin="0,10,0,0">
+                                    <StackPanel>
+                                        <!-- Pulse Width -->
+                                        <DockPanel x:Name="PulseWidthDockPanel" Margin="0,5">
+                                            <Label Content="Width:" Width="100"/>
+                                            <TextBox x:Name="PulseWidth" Width="100" 
+                     TextChanged="ChannelPulseWidthTextBox_TextChanged" 
+                     LostFocus="ChannelPulseWidthTextBox_LostFocus" 
+                     Text="0.5" 
+                     VerticalContentAlignment="Center" 
+                     HorizontalContentAlignment="Right"/>
+                                            <ComboBox x:Name="PulseWidthUnitComboBox" Width="70" Margin="5,0,0,0" 
+                      SelectionChanged="PulseWidthUnitComboBox_SelectionChanged" 
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="s"/>
+                                                <ComboBoxItem Content="ms"/>
+                                                <ComboBoxItem Content="µs" IsSelected="True"/>
+                                                <ComboBoxItem Content="ns"/>
+                                                <ComboBoxItem Content="ps"/>
+                                            </ComboBox>
+                                        </DockPanel>
+
+                                        <!-- Pulse Rise Time with ComboBox -->
+                                        <DockPanel x:Name="PulseRiseTimeDockPanel" Margin="0,5">
+                                            <Label Content="Rise Time:" Width="100"/>
+                                            <TextBox x:Name="PulseRiseTime" Width="100" 
+                     TextChanged="ChannelPulseRiseTimeTextBox_TextChanged" 
+                     LostFocus="ChannelPulseRiseTimeTextBox_LostFocus" 
+                     Text="20" 
+                     VerticalContentAlignment="Center" 
+                     HorizontalContentAlignment="Right"/>
+                                            <ComboBox x:Name="PulseRiseTimeUnitComboBox" Width="70" Margin="5,0,0,0" 
+                      SelectionChanged="PulseRiseTimeUnitComboBox_SelectionChanged" 
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="s"/>
+                                                <ComboBoxItem Content="ms"/>
+                                                <ComboBoxItem Content="µs"/>
+                                                <ComboBoxItem Content="ns" IsSelected="True"/>
+                                                <ComboBoxItem Content="ps"/>
+                                            </ComboBox>
+                                        </DockPanel>
+
+                                        <!-- Pulse Fall Time with ComboBox -->
+                                        <DockPanel x:Name="PulseFallTimeDockPanel" Margin="0,5">
+                                            <Label Content="Fall Time:" Width="100"/>
+                                            <TextBox x:Name="PulseFallTime" Width="100" 
+                     TextChanged="ChannelPulseFallTimeTextBox_TextChanged" 
+                     LostFocus="ChannelPulseFallTimeTextBox_LostFocus" 
+                     Text="20" 
+                     VerticalContentAlignment="Center" 
+                     HorizontalContentAlignment="Right"/>
+                                            <ComboBox x:Name="PulseFallTimeUnitComboBox" Width="70" Margin="5,0,0,0" 
+                      SelectionChanged="PulseFallTimeUnitComboBox_SelectionChanged" 
+                      HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="s"/>
+                                                <ComboBoxItem Content="ms"/>
+                                                <ComboBoxItem Content="µs"/>
+                                                <ComboBoxItem Content="ns" IsSelected="True"/>
+                                                <ComboBoxItem Content="ps"/>
+                                            </ComboBox>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </GroupBox>
+
+
                                 <!-- 2. HARMONICS CONTROLS IMPLEMENTATION -->
                                 <!-- Add this content inside the HarmonicsGroupBox in the ContinuousModeGrid section -->
                                 <GroupBox x:Name="HarmonicsGroupBox" Header="Harmonics Controls" Visibility="Collapsed" Margin="0,10,0,0">
@@ -427,72 +498,10 @@
                                     </StackPanel>
                                 </GroupBox>
 
-                                <!-- Pulse Section -->
-                                <!-- 1. PULSE CONTROLS IMPLEMENTATION -->
-                                <!-- Add this content inside the PulseGroupBox in the ContinuousModeGrid section -->
-                                <GroupBox x:Name="PulseGroupBox" Header="Pulse Controls" Visibility="Collapsed" Margin="0,10,0,0">
-                                    <StackPanel>
-                                        <!-- Pulse Width -->
-                                        <DockPanel x:Name="PulseWidthDockPanel" Margin="0,5">
-                                            <Label Content="Width:" Width="100"/>
-                                            <TextBox x:Name="PulseWidth" Width="100" 
-                     TextChanged="ChannelPulseWidthTextBox_TextChanged" 
-                     LostFocus="ChannelPulseWidthTextBox_LostFocus" 
-                     Text="0.5" 
-                     VerticalContentAlignment="Center" 
-                     HorizontalContentAlignment="Right"/>
-                                            <ComboBox x:Name="PulseWidthUnitComboBox" Width="70" Margin="5,0,0,0" 
-                      SelectionChanged="PulseWidthUnitComboBox_SelectionChanged" 
-                      HorizontalAlignment="Left">
-                                                <ComboBoxItem Content="s"/>
-                                                <ComboBoxItem Content="ms"/>
-                                                <ComboBoxItem Content="µs" IsSelected="True"/>
-                                                <ComboBoxItem Content="ns"/>
-                                                <ComboBoxItem Content="ps"/>
-                                            </ComboBox>
-                                        </DockPanel>
 
-                                        <!-- Pulse Rise Time with ComboBox -->
-                                        <DockPanel x:Name="PulseRiseTimeDockPanel" Margin="0,5">
-                                            <Label Content="Rise Time:" Width="100"/>
-                                            <TextBox x:Name="PulseRiseTime" Width="100" 
-                     TextChanged="ChannelPulseRiseTimeTextBox_TextChanged" 
-                     LostFocus="ChannelPulseRiseTimeTextBox_LostFocus" 
-                     Text="20" 
-                     VerticalContentAlignment="Center" 
-                     HorizontalContentAlignment="Right"/>
-                                            <ComboBox x:Name="PulseRiseTimeUnitComboBox" Width="70" Margin="5,0,0,0" 
-                      SelectionChanged="PulseRiseTimeUnitComboBox_SelectionChanged" 
-                      HorizontalAlignment="Left">
-                                                <ComboBoxItem Content="s"/>
-                                                <ComboBoxItem Content="ms"/>
-                                                <ComboBoxItem Content="µs"/>
-                                                <ComboBoxItem Content="ns" IsSelected="True"/>
-                                                <ComboBoxItem Content="ps"/>
-                                            </ComboBox>
-                                        </DockPanel>
 
-                                        <!-- Pulse Fall Time with ComboBox -->
-                                        <DockPanel x:Name="PulseFallTimeDockPanel" Margin="0,5">
-                                            <Label Content="Fall Time:" Width="100"/>
-                                            <TextBox x:Name="PulseFallTime" Width="100" 
-                     TextChanged="ChannelPulseFallTimeTextBox_TextChanged" 
-                     LostFocus="ChannelPulseFallTimeTextBox_LostFocus" 
-                     Text="20" 
-                     VerticalContentAlignment="Center" 
-                     HorizontalContentAlignment="Right"/>
-                                            <ComboBox x:Name="PulseFallTimeUnitComboBox" Width="70" Margin="5,0,0,0" 
-                      SelectionChanged="PulseFallTimeUnitComboBox_SelectionChanged" 
-                      HorizontalAlignment="Left">
-                                                <ComboBoxItem Content="s"/>
-                                                <ComboBoxItem Content="ms"/>
-                                                <ComboBoxItem Content="µs"/>
-                                                <ComboBoxItem Content="ns" IsSelected="True"/>
-                                                <ComboBoxItem Content="ps"/>
-                                            </ComboBox>
-                                        </DockPanel>
-                                    </StackPanel>
-                                </GroupBox>
+                                <!-- 3. DUAL TONE CONTROLS IMPLEMENTATION -->
+                                <!-- 3. DUAL TONE CONTROLS IMPLEMENTATION -->
                                 <!-- 3. DUAL TONE CONTROLS IMPLEMENTATION -->
                                 <!-- Add this to the ContinuousModeGrid after HarmonicsGroupBox -->
                                 <GroupBox x:Name="DualToneGroupBox" Header="Dual Tone Controls" Visibility="Collapsed" Margin="0,10,0,0" 
@@ -662,6 +671,9 @@
                                     </StackPanel>
                                 </GroupBox>
 
+
+                                <!-- 4. ARBITRARY WAVEFORM CONTROLS IMPLEMENTATION -->
+                                <!-- 4. ARBITRARY WAVEFORM CONTROLS IMPLEMENTATION -->
                                 <!-- 4. ARBITRARY WAVEFORM CONTROLS IMPLEMENTATION -->
                                 <!-- Add this to the ContinuousModeGrid after DualToneGroupBox -->
                                 <GroupBox x:Name="ArbitraryWaveformGroupBox" Header="Arbitrary Waveform Controls" Visibility="Collapsed" Margin="0,10,0,0">
@@ -744,6 +756,8 @@
                                 </GroupBox>
 
                                 <!-- 5. DC CONTROLS IMPLEMENTATION -->
+                                <!-- 5. DC CONTROLS IMPLEMENTATION -->
+                                <!-- 5. DC CONTROLS IMPLEMENTATION -->
                                 <!-- Add this to the ContinuousModeGrid after ArbitraryWaveformGroupBox -->
                                 <GroupBox x:Name="DCGroupBox" Header="DC Voltage Controls" Visibility="Collapsed" Margin="0,10,0,0">
                                     <StackPanel>
@@ -796,12 +810,16 @@ For accurate voltage measurement, set the load impedance to match your actual lo
                                     </StackPanel>
                                 </GroupBox>
 
-                                
 
-                                <!-- All other existing waveform-specific GroupBoxes -->
-                                <!-- DualToneGroupBox, ArbitraryWaveformGroupBox, DCGroupBox, etc. -->
                             </Grid>
 
+                            <!-- Modulation Mode Sections -->
+                            <!-- Modulation Mode Sections -->
+                            <!-- Modulation Mode Sections -->
+                            <!-- Modulation Mode Sections -->
+                            <!-- Modulation Mode Sections -->
+                            <!-- Modulation Mode Sections -->
+                            <!-- Modulation Mode Sections -->
                             <!-- Modulation Mode Sections -->
                             <Grid x:Name="ModulationModeGrid" Grid.Row="2" Margin="5,0,5,5" Visibility="Collapsed">
                                 <!-- Modulation Type Selection -->
