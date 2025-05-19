@@ -1,29 +1,35 @@
+using DG2072_USB_Control.Continuous.ArbitraryWaveform;
+using DG2072_USB_Control.Continuous.DC;
+using DG2072_USB_Control.Continuous.DualTone;
+using DG2072_USB_Control.Continuous.Harmonics;
+using DG2072_USB_Control.Continuous.Noise;
+using DG2072_USB_Control.Continuous.PulseGenerator;
+using DG2072_USB_Control.Continuous.Ramp;
+using DG2072_USB_Control.Continuous.Sinusoid;
+using DG2072_USB_Control.Continuous.Square;
+using DG2072_USB_Control.Modulation; // New namespace for modulation classes
+using DG2072_USB_Control.Modulation.AM;
+using DG2072_USB_Control.Modulation.ASK;
+using DG2072_USB_Control.Modulation.FM;
+using DG2072_USB_Control.Modulation.FSK;
+using DG2072_USB_Control.Modulation.PM;
+using DG2072_USB_Control.Modulation.PSK;
+using DG2072_USB_Control.Modulation.PWM;
+using DG2072_USB_Control.Services;
+using MathNet.Numerics;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using MathNet.Numerics;
 using System.Windows.Controls.Primitives;
-using System.Windows.Threading;
-using DG2072_USB_Control.Services;
 using System.Windows.Media;
-using System.Collections.Generic;
+using System.Windows.Threading;
 using static DG2072_USB_Control.RigolDG2072;
-using System.Threading.Channels;
-
-using DG2072_USB_Control.Continuous.Harmonics;
-using DG2072_USB_Control.Continuous.PulseGenerator;
-using DG2072_USB_Control.Continuous.DualTone;
-using DG2072_USB_Control.Continuous.Ramp;
-using DG2072_USB_Control.Continuous.Square;
-using DG2072_USB_Control.Continuous.Sinusoid;
-using DG2072_USB_Control.Continuous.DC;
-using DG2072_USB_Control.Continuous.Noise;
-using DG2072_USB_Control.Continuous.ArbitraryWaveform;
-using DG2072_USB_Control.Modulation; // New namespace for modulation classes
 
 namespace DG2072_USB_Control
 {
@@ -194,31 +200,31 @@ namespace DG2072_USB_Control
         {
             // Initialize AM modulation generator
             amModulation = new AMModulation(rigolDG2072, activeChannel, this);
-            amModulation.LogEvent += (s, message) => LogMessage(message);
+            amModulation.LogEvent += (s, msg) => LogMessage(msg);
 
             // Initialize FM modulation generator
             fmModulation = new FMModulation(rigolDG2072, activeChannel, this);
-            fmModulation.LogEvent += (s, message) => LogMessage(message);
+            fmModulation.LogEvent += (s, msg) => LogMessage(msg);
 
             // Initialize PM modulation generator
             pmModulation = new PMModulation(rigolDG2072, activeChannel, this);
-            pmModulation.LogEvent += (s, message) => LogMessage(message);
+            pmModulation.LogEvent += (s, msg) => LogMessage(msg);
 
             // Initialize ASK modulation generator
             askModulation = new ASKModulation(rigolDG2072, activeChannel, this);
-            askModulation.LogEvent += (s, message) => LogMessage(message);
+            askModulation.LogEvent += (s, msg) => LogMessage(msg);
 
             // Initialize FSK modulation generator
             fskModulation = new FSKModulation(rigolDG2072, activeChannel, this);
-            fskModulation.LogEvent += (s, message) => LogMessage(message);
+            fskModulation.LogEvent += (s, msg) => LogMessage(msg);
 
             // Initialize PSK modulation generator
             pskModulation = new PSKModulation(rigolDG2072, activeChannel, this);
-            pskModulation.LogEvent += (s, message) => LogMessage(message);
+            pskModulation.LogEvent += (s, msg) => LogMessage(msg);
 
             // Initialize PWM modulation generator
             pwmModulation = new PWMModulation(rigolDG2072, activeChannel, this);
-            pwmModulation.LogEvent += (s, message) => LogMessage(message);
+            pwmModulation.LogEvent += (s, msg) => LogMessage(msg); ;
         }
 
         private void StartupDelayedAutoConnect()
