@@ -3,6 +3,8 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Controls.Primitives;
+
 
 namespace DG2072_USB_Control
 {
@@ -118,7 +120,15 @@ namespace DG2072_USB_Control
                 // Update operational mode
                 operationMode = rb.Content.ToString();
                 LogMessage($"Switched to {operationMode} mode");
-                
+
+                // Check if UI elements are initialized
+                if (ContinuousModeGrid == null || ModulationModeGrid == null ||
+                    WaveformSelectionDockPanel == null || ModulationTypeComboBox == null)
+                {
+                    // UI elements not fully initialized yet
+                    return;
+                }
+
                 // Update UI for selected mode
                 if (operationMode == "Continuous")
                 {
@@ -131,7 +141,7 @@ namespace DG2072_USB_Control
                     ContinuousModeGrid.Visibility = Visibility.Collapsed;
                     ModulationModeGrid.Visibility = Visibility.Visible;
                     WaveformSelectionDockPanel.Visibility = Visibility.Collapsed;
-                    
+
                     // Initialize modulation UI if necessary
                     if (ModulationTypeComboBox.SelectedItem != null)
                     {

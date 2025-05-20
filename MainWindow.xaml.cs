@@ -6,6 +6,10 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Collections.Generic;
 
+
+
+private bool uiInitialized = false;
+
 namespace DG2072_USB_Control
 {
     /// <summary>
@@ -59,6 +63,12 @@ namespace DG2072_USB_Control
         {
             LogMessage("Application started");
             UpdateUIState();
+
+
+
+            // Set initialization flag when everything is ready
+            uiInitialized = true;
+
         }
 
         /// <summary>
@@ -82,6 +92,21 @@ namespace DG2072_USB_Control
                     LogMessage("Disconnected from device on application close");
                 }
             }
+        }
+
+
+        /// <summary>
+        ///  a helper method to safely access UI controls:
+        /// </summary>
+        /// <returns></returns>
+        private bool IsUIReady()
+        {
+            if (!uiInitialized)
+            {
+                LogMessage("Warning: UI access attempted before initialization completed");
+                return false;
+            }
+            return true;
         }
 
         #endregion
@@ -170,15 +195,18 @@ namespace DG2072_USB_Control
         {
             string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
             string logEntry = $"[{timestamp}] {message}";
-            
+
             // Add to log collection
             commandLog.Add(logEntry);
-            
+
             // Update UI on UI thread
             Dispatcher.Invoke(() =>
             {
-                CommandLogTextBox.AppendText(logEntry + Environment.NewLine);
-                CommandLogTextBox.ScrollToEnd();
+                if (CommandLogTextBox != null)
+                {
+                    CommandLogTextBox.AppendText(logEntry + Environment.NewLine);
+                    CommandLogTextBox.ScrollToEnd();
+                }
             });
         }
 

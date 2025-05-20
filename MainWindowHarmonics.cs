@@ -2,6 +2,8 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+
 
 namespace DG2072_USB_Control
 {
@@ -45,7 +47,14 @@ namespace DG2072_USB_Control
             {
                 string mode = rb.Content.ToString();
                 LogMessage($"Harmonic amplitude mode changed to {mode}");
-                
+
+                // Check if UI element is initialized
+                if (AmplitudeHeader == null)
+                {
+                    // AmplitudeHeader is not yet initialized
+                    return;
+                }
+
                 // Update UI based on mode
                 if (mode == "Percentage")
                 {

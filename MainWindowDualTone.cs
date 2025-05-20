@@ -30,7 +30,14 @@ namespace DG2072_USB_Control
             {
                 string mode = rb.Content.ToString();
                 LogMessage($"Dual tone mode changed to {mode}");
-                
+
+                // Check if UI elements are initialized
+                if (DirectFrequencyPanel == null || CenterOffsetPanel == null)
+                {
+                    // UI elements not fully initialized yet
+                    return;
+                }
+
                 // Update UI based on mode
                 if (mode == "Direct Frequencies")
                 {

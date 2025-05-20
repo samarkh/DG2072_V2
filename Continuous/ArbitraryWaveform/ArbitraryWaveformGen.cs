@@ -5,6 +5,8 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using DG2072_USB_Control.Services;
 using DG2072_USB_Control.Continuous.ArbitraryWaveform.Descriptions;
+using System.Windows.Controls.Primitives;
+
 
 namespace DG2072_USB_Control.Continuous.ArbitraryWaveform
 {
