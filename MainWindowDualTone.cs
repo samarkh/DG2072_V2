@@ -73,6 +73,7 @@ namespace DG2072_USB_Control
         /// </summary>
         private void SynchronizeFrequenciesCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
+            if (!IsUIReady()) return;
             if (sender is CheckBox checkBox)
             {
                 bool syncEnabled = checkBox.IsChecked == true;

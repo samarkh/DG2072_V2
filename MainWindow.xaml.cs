@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 
 
-private bool uiInitialized = false;
+
 
 namespace DG2072_USB_Control
 {
@@ -17,6 +17,7 @@ namespace DG2072_USB_Control
     /// </summary>
     public partial class MainWindow : Window
     {
+        
         #region Properties and Fields
 
         // Device connection state
@@ -30,6 +31,9 @@ namespace DG2072_USB_Control
         
         // Logger for commands
         private List<string> commandLog = new List<string>();
+
+        private bool uiInitialized = false;
+
 
         #endregion
 
